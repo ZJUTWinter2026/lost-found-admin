@@ -9,20 +9,13 @@ import { toCampusName } from '@/api/shared/transforms'
 import { useAdminStatisticsQuery } from '@/query/admin'
 import { usePostListQuery } from '@/query/post'
 import { queryKeys } from '@/query/query-keys'
-import { useSystemConfigQuery, useUpdateSystemConfigMutation } from '@/query/system'
+import { useSystemConfigQuery, useUpdateClaimValidityDaysMutation, useUpdateFeedbackTypesMutation, useUpdateItemTypesMutation, useUpdatePublishLimitMutation } from '@/query/system'
 import { formatDateTime } from '@/utils/admin-mock'
 
 const { RangePicker } = DatePicker
 const { Text, Title } = Typography
 
 type GlobalTab = 'overview' | 'params' | 'permission'
-
-function normalizePercent(value: number) {
-  if (Number.isNaN(value))
-    return '0%'
-
-  return `${(value * 100).toFixed(1)}%`
-}
 
 export default function GlobalManagementPage() {
   const { message } = App.useApp()
@@ -40,18 +33,23 @@ export default function GlobalManagementPage() {
 
   const [newItemType, setNewItemType] = useState('')
   const [newFeedbackType, setNewFeedbackType] = useState('')
+  const [claimDays, setClaimDays] = useState<number>()
+  const [publishLimit, setPublishLimit] = useState<number>()
   const [guideline, setGuideline] = useState('《失物招领内容规范》：发布信息需真实、完整，不得含违法违规内容。')
 
   const configQuery = useSystemConfigQuery()
   const statisticsQuery = useAdminStatisticsQuery(activeTab === 'overview')
-  const updateConfigMutation = useUpdateSystemConfigMutation()
+  const updateFeedbackTypesMutation = useUpdateFeedbackTypesMutation()
+  const updateItemTypesMutation = useUpdateItemTypesMutation()
+  const updateClaimValidityDaysMutation = useUpdateClaimValidityDaysMutation()
+  const updatePublishLimitMutation = useUpdatePublishLimitMutation()
 
   const overviewQuery = usePostListQuery({
     campus: appliedCampus,
     end_time: appliedRange?.[1],
     item_type: appliedType,
     page: 1,
-    page_size: 200,
+    page_size: 20,
     start_time: appliedRange?.[0],
   })
 
@@ -70,7 +68,7 @@ export default function GlobalManagementPage() {
   const typeRows = useMemo(
     () => Object.entries(statisticsQuery.data?.type_counts ?? {}).map(([key, value]) => ({
       key,
-      percentage: normalizePercent(statisticsQuery.data?.type_percentage?.[key] ?? 0),
+      percentage: statisticsQuery.data?.type_percentage?.[key] ?? '0%',
       total: value,
       type: key,
     })),
@@ -87,27 +85,11 @@ export default function GlobalManagementPage() {
       return
     }
 
-    setSelectedRange([start, end])
+    setSelectedRange([`${start}T00:00:00Z`, `${end}T23:59:59Z`])
   }
 
   const refreshConfig = async () => {
     await queryClient.invalidateQueries({ queryKey: queryKeys.system.config() })
-  }
-
-  const updateConfig = async (payload: Parameters<typeof updateConfigMutation.mutateAsync>[0], successText: string) => {
-    const current = configQuery.data
-    if (!current)
-      return
-
-    await updateConfigMutation.mutateAsync({
-      claim_validity_days: current.claim_validity_days,
-      feedback_types: current.feedback_types,
-      item_types: current.item_types,
-      publish_limit: current.publish_limit,
-      ...payload,
-    })
-    await refreshConfig()
-    message.success(successText)
   }
 
   const config = configQuery.data
@@ -268,10 +250,9 @@ export default function GlobalManagementPage() {
                       return
 
                     const next = Array.from(new Set([...config.feedback_types, newFeedbackType.trim()]))
-                    await updateConfig({
-                      config_key: 'feedback_types',
-                      feedback_types: next,
-                    }, '投诉反馈类型已更新')
+                    await updateFeedbackTypesMutation.mutateAsync({ feedback_types: next })
+                    await refreshConfig()
+                    message.success('投诉反馈类型已更新')
                     setNewFeedbackType('')
                   }}
                 >
@@ -305,10 +286,9 @@ export default function GlobalManagementPage() {
                       return
 
                     const next = Array.from(new Set([...config.item_types, newItemType.trim()]))
-                    await updateConfig({
-                      config_key: 'item_types',
-                      item_types: next,
-                    }, '物品类型已更新')
+                    await updateItemTypesMutation.mutateAsync({ item_types: next })
+                    await refreshConfig()
+                    message.success('物品类型已更新')
                     setNewItemType('')
                   }}
                 >
@@ -326,14 +306,13 @@ export default function GlobalManagementPage() {
                 addonAfter="天"
                 defaultValue={config?.claim_validity_days}
                 key={config?.claim_validity_days}
-                onChange={async (value) => {
-                  if (!value)
+                onChange={value => setClaimDays(value ? Math.min(Math.max(value, 1), 365) : undefined)}
+                onBlur={async () => {
+                  if (!claimDays || claimDays === config?.claim_validity_days)
                     return
-
-                  await updateConfig({
-                    claim_validity_days: value,
-                    config_key: 'claim_validity_days',
-                  }, '认领时效已更新')
+                  await updateClaimValidityDaysMutation.mutateAsync({ claim_validity_days: claimDays })
+                  await refreshConfig()
+                  message.success('认领时效已更新')
                 }}
               />
             </Flex>
@@ -350,14 +329,13 @@ export default function GlobalManagementPage() {
               addonAfter="条/天"
               defaultValue={config?.publish_limit}
               key={config?.publish_limit}
-              onChange={async (value) => {
-                if (!value)
+              onChange={value => setPublishLimit(value ? Math.min(Math.max(value, 1), 200) : undefined)}
+              onBlur={async () => {
+                if (!publishLimit || publishLimit === config?.publish_limit)
                   return
-
-                await updateConfig({
-                  config_key: 'publish_limit',
-                  publish_limit: value,
-                }, '发布频率已更新')
+                await updatePublishLimitMutation.mutateAsync({ publish_limit: publishLimit })
+                await refreshConfig()
+                message.success('发布频率已更新')
               }}
             />
           </Card>

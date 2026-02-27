@@ -1,2 +1,2 @@
-export { useUpdateSystemConfigMutation } from './mutations'
+export { useUpdateClaimValidityDaysMutation, useUpdateFeedbackTypesMutation, useUpdateItemTypesMutation, useUpdatePublishLimitMutation } from './mutations'
 export { useSystemConfigQuery } from './queries'

@@ -113,7 +113,7 @@ export default function InfoMaintenancePage() {
     end_time: appliedRange?.[1],
     item_type: appliedType,
     page: 1,
-    page_size: 200,
+    page_size: 20,
     start_time: appliedRange?.[0],
   })
 

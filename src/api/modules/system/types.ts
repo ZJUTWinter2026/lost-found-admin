@@ -5,10 +5,18 @@ export interface SystemConfig {
   publish_limit: number
 }
 
-export interface UpdateSystemConfigRequest {
-  claim_validity_days?: number
-  config_key: 'feedback_types' | 'item_types' | 'claim_validity_days' | 'publish_limit'
-  feedback_types?: string[]
-  item_types?: string[]
-  publish_limit?: number
+export interface UpdateFeedbackTypesRequest {
+  feedback_types: string[]
+}
+
+export interface UpdateItemTypesRequest {
+  item_types: string[]
+}
+
+export interface UpdateClaimValidityDaysRequest {
+  claim_validity_days: number
+}
+
+export interface UpdatePublishLimitRequest {
+  publish_limit: number
 }

@@ -4,7 +4,7 @@ import { queryKeys } from '@/query/query-keys'
 
 export function useAdminPendingListQuery() {
   return useQuery({
-    queryFn: () => getAdminPendingPostList({ page: 1, page_size: 200 }),
+    queryFn: () => getAdminPendingPostList({ page: 1, page_size: 20 }),
     queryKey: queryKeys.admin.pendingList(),
   })
 }

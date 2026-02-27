@@ -38,7 +38,7 @@ export default function AnnouncementContentPage() {
   const publishMutation = usePublishAnnouncementMutation()
   const approveMutation = useApproveAnnouncementMutation()
 
-  const postListQuery = usePostListQuery({ page: 1, page_size: 200 })
+  const postListQuery = usePostListQuery({ page: 1, page_size: 20 })
   const postDetailQuery = useAdminPendingDetailQuery(selectedPostId)
   const deletePostMutation = useDeleteAdminPostMutation()
 

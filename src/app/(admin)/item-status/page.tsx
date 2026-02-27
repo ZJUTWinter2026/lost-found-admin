@@ -61,7 +61,7 @@ export default function ItemStatusPage() {
 
   const postListQuery = usePostListQuery({
     page: 1,
-    page_size: 200,
+    page_size: 20,
     publish_type: activeTab,
   })
 
@@ -76,7 +76,7 @@ export default function ItemStatusPage() {
 
   const allRowsForCount = usePostListQuery({
     page: 1,
-    page_size: 200,
+    page_size: 20,
   })
 
   const lostCount = useMemo(
@@ -120,7 +120,7 @@ export default function ItemStatusPage() {
 
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.post.list({}) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.post.list({ page: 1, page_size: 200, publish_type: activeTab }) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.post.list({ page: 1, page_size: 20, publish_type: activeTab }) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.admin.pendingDetail(currentDetail.id) }),
     ])
   }
@@ -147,7 +147,7 @@ export default function ItemStatusPage() {
 
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.post.list({}) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.post.list({ page: 1, page_size: 200, publish_type: activeTab }) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.post.list({ page: 1, page_size: 20, publish_type: activeTab }) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.admin.pendingDetail(currentDetail.id) }),
     ])
   }
