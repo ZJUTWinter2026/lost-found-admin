@@ -123,10 +123,6 @@ export default function LoginPage() {
           size="large"
           onFinish={handleLogin}
         >
-          <Text type="secondary" className="!mb-4 !block">
-            请输入后端已分配的工号与密码进行登录。
-          </Text>
-
           <Form.Item
             className="!mb-4"
             label="工号"

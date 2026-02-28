@@ -9,7 +9,7 @@ import { useDeleteAdminPostMutation } from '@/query/admin'
 import { useFeedbackDetailQuery, useFeedbackListQuery, useProcessFeedbackMutation } from '@/query/feedback'
 import { usePostListQuery } from '@/query/post'
 import { queryKeys } from '@/query/query-keys'
-import { formatDateTime } from '@/utils/admin-mock'
+import { formatDateTime, getBeijingTimestamp } from '@/utils/admin-mock'
 
 type MainTab = 'all_info' | 'feedback'
 type DisableDuration = '7d' | '1m' | '6m' | '1y'
@@ -52,7 +52,7 @@ export default function DataManagementPage() {
     const source = (postListQuery.data?.list ?? []).filter(item => !hiddenPostIds.includes(item.id))
 
     if (!showExpiredData) {
-      return [...source].sort((a, b) => new Date(b.event_time).getTime() - new Date(a.event_time).getTime())
+      return [...source].sort((a, b) => getBeijingTimestamp(b.event_time) - getBeijingTimestamp(a.event_time))
     }
 
     return source
@@ -60,11 +60,11 @@ export default function DataManagementPage() {
         const status = normalizePostStatus(item.status)
         return EXPIRED_STATUS_KEYS.some(key => status.includes(key))
       })
-      .sort((a, b) => new Date(b.event_time).getTime() - new Date(a.event_time).getTime())
+      .sort((a, b) => getBeijingTimestamp(b.event_time) - getBeijingTimestamp(a.event_time))
   }, [hiddenPostIds, postListQuery.data?.list, showExpiredData])
 
   const sortedFeedbacks = useMemo(
-    () => [...(feedbackListQuery.data?.list ?? [])].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+    () => [...(feedbackListQuery.data?.list ?? [])].sort((a, b) => getBeijingTimestamp(b.created_at) - getBeijingTimestamp(a.created_at)),
     [feedbackListQuery.data?.list],
   )
 
@@ -74,19 +74,15 @@ export default function DataManagementPage() {
   return (
     <Space direction="vertical" size={16} className="w-full">
       <Card>
-        <Flex vertical gap={10}>
-          <Typography.Title level={4} className="!mb-0">数据管理</Typography.Title>
-          <Typography.Text type="secondary">备份导出、清理数据、处理投诉反馈</Typography.Text>
-          <Segmented
-            block
-            value={activeTab}
-            options={[
-              { label: '全校失物招领信息', value: 'all_info' },
-              { label: '投诉与反馈', value: 'feedback' },
-            ]}
-            onChange={value => setActiveTab(value as MainTab)}
-          />
-        </Flex>
+        <Segmented
+          block
+          value={activeTab}
+          options={[
+            { label: '全校失物招领信息', value: 'all_info' },
+            { label: '投诉与反馈', value: 'feedback' },
+          ]}
+          onChange={value => setActiveTab(value as MainTab)}
+        />
       </Card>
 
       {activeTab === 'all_info' && (

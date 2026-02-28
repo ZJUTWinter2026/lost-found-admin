@@ -44,10 +44,18 @@ export function AdminShell({ children }: AdminShellProps) {
   }
 
   return (
-    <div className="min-h-screen">
+    <div
+      className="flex min-h-screen flex-col overflow-hidden"
+      style={{
+        background: 'linear-gradient(180deg, #f8fbff 0%, #f0f7ff 100%)',
+        height: '100dvh',
+      }}
+    >
       <AdminTopNav />
-      <main className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6 md:py-6">
-        {children}
+      <main className="flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6 md:py-6">
+          {children}
+        </div>
       </main>
     </div>
   )

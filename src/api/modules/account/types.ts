@@ -1,7 +1,7 @@
 export interface AccountListRequest {
   page?: number
   page_size?: number
-  username?: number
+  username?: string
   user_type?: 'STUDENT' | 'ADMIN' | 'SYSTEM_ADMIN'
 }
 
@@ -11,7 +11,7 @@ export interface AccountListItem {
   first_login: boolean
   id: number
   name: string
-  username: number
+  username: string | number
   user_type: string
 }
 
@@ -23,11 +23,11 @@ export interface AccountListResponse {
 }
 
 export interface CreateAccountRequest {
-  campus?: string
+  campus?: 'ZHAO_HUI' | 'PING_FENG' | 'MO_GAN_SHAN'
   id_card: string
   name: string
   password?: string
-  username: number
+  username: string
   user_type: 'STUDENT' | 'ADMIN' | 'SYSTEM_ADMIN'
 }
 
@@ -45,7 +45,7 @@ export interface EnableAccountRequest {
 }
 
 export interface UpdateAccountRequest {
-  campus?: string
+  campus?: 'ZHAO_HUI' | 'PING_FENG' | 'MO_GAN_SHAN'
   id: number
   reset_password?: boolean
   user_type?: 'STUDENT' | 'ADMIN' | 'SYSTEM_ADMIN'

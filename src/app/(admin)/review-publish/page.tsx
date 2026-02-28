@@ -13,7 +13,7 @@ import {
   useRejectAdminPostMutation,
 } from '@/query/admin'
 import { queryKeys } from '@/query/query-keys'
-import { formatDateTime } from '@/utils/admin-mock'
+import { formatDateTime, getBeijingTimestamp, getNowInBeijing } from '@/utils/admin-mock'
 
 const { TextArea } = Input
 const { Text, Title } = Typography
@@ -63,7 +63,7 @@ function toHistoryItem(detail: AdminPostDetail, result: ReviewResult, reason?: s
     features: detail.features,
     images: detail.images ?? [],
     reviewResult: result,
-    reviewedAt: new Date().toISOString(),
+    reviewedAt: getNowInBeijing(),
     rejectReason: reason,
   }
 }
@@ -92,19 +92,19 @@ export default function ReviewPublishPage() {
   const pendingLostItems = useMemo(
     () => pendingItems
       .filter(item => toPublishKind(item.publish_type) === 'lost')
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+      .sort((a, b) => getBeijingTimestamp(b.created_at) - getBeijingTimestamp(a.created_at)),
     [pendingItems],
   )
 
   const pendingFoundItems = useMemo(
     () => pendingItems
       .filter(item => toPublishKind(item.publish_type) === 'found')
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+      .sort((a, b) => getBeijingTimestamp(b.created_at) - getBeijingTimestamp(a.created_at)),
     [pendingItems],
   )
 
   const sortedHistory = useMemo(
-    () => [...historyItems].sort((a, b) => new Date(b.reviewedAt).getTime() - new Date(a.reviewedAt).getTime()),
+    () => [...historyItems].sort((a, b) => getBeijingTimestamp(b.reviewedAt) - getBeijingTimestamp(a.reviewedAt)),
     [historyItems],
   )
 

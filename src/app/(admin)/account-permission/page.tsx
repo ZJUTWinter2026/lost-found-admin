@@ -4,6 +4,7 @@ import type { ColumnsType } from 'antd/es/table'
 import { useQueryClient } from '@tanstack/react-query'
 import { App, Button, Card, Flex, Form, Input, Modal, Radio, Segmented, Select, Space, Table, Tag, Typography } from 'antd'
 import { useMemo, useState } from 'react'
+import { resolveErrorMessage } from '@/api/core/errors'
 import { normalizeDateTime, toAccountRoleLabel, toDisableDurationParam } from '@/api/shared/transforms'
 import {
   useAccountListQuery,
@@ -13,19 +14,20 @@ import {
   useUpdateAccountMutation,
 } from '@/query/account'
 import { queryKeys } from '@/query/query-keys'
-import { formatDateTime } from '@/utils/admin-mock'
+import { formatDateTime, getBeijingTimestamp } from '@/utils/admin-mock'
 
 const { Text } = Typography
 
 type MainTab = 'manage' | 'create'
 type DisableDuration = '7d' | '1m' | '6m' | '1y'
 type AccountUserType = 'STUDENT' | 'ADMIN' | 'SYSTEM_ADMIN'
+type CampusCode = 'ZHAO_HUI' | 'PING_FENG' | 'MO_GAN_SHAN'
 
 interface AccountRow {
   disabledUntil: string | null
   id: number
   name: string
-  username: number
+  username: string | number
   userType: string
 }
 
@@ -41,6 +43,7 @@ interface RestoreModalState {
 }
 
 interface CreateAccountValues {
+  campus?: CampusCode
   idCard: string
   name: string
   password: string
@@ -56,6 +59,22 @@ const DISABLE_DURATION_OPTIONS: { label: string, value: DisableDuration }[] = [
   { label: '半年', value: '6m' },
   { label: '1年', value: '1y' },
 ]
+const CAMPUS_OPTIONS: { label: string, value: CampusCode }[] = [
+  { label: '朝晖', value: 'ZHAO_HUI' },
+  { label: '屏峰', value: 'PING_FENG' },
+  { label: '莫干山', value: 'MO_GAN_SHAN' },
+]
+
+function isAccountCurrentlyDisabled(disabledUntil: string | null) {
+  if (!disabledUntil)
+    return false
+
+  const timestamp = getBeijingTimestamp(disabledUntil)
+  if (!timestamp)
+    return false
+
+  return timestamp > Date.now()
+}
 
 export default function AccountPermissionPage() {
   const { message } = App.useApp()
@@ -64,7 +83,7 @@ export default function AccountPermissionPage() {
   const [activeTab, setActiveTab] = useState<MainTab>('manage')
 
   const [searchKeyword, setSearchKeyword] = useState('')
-  const [queryUid, setQueryUid] = useState<number | undefined>()
+  const [queryUid, setQueryUid] = useState<string | undefined>()
   const [nameFilter, setNameFilter] = useState('')
 
   const [disableState, setDisableState] = useState<DisableModalState>({
@@ -77,6 +96,7 @@ export default function AccountPermissionPage() {
     account: null,
   })
   const [createForm] = Form.useForm<CreateAccountValues>()
+  const selectedUserType = Form.useWatch('userType', createForm)
 
   const listQuery = useAccountListQuery(queryUid)
   const createMutation = useCreateAccountMutation()
@@ -133,9 +153,11 @@ export default function AccountPermissionPage() {
     {
       title: '状态',
       key: 'status',
-      width: 210,
+      width: 200,
       render: (_, record) => {
-        if (!record.disabledUntil)
+        const isDisabled = isAccountCurrentlyDisabled(record.disabledUntil)
+
+        if (!isDisabled)
           return <Tag color="success">正常</Tag>
 
         return (
@@ -149,51 +171,60 @@ export default function AccountPermissionPage() {
     {
       title: '操作',
       key: 'actions',
-      width: 360,
-      render: (_, record) => (
-        <Flex wrap gap={8}>
-          <Button
-            size="small"
-            disabled={Boolean(record.disabledUntil) || isWorking}
-            onClick={() => {
-              setDisableState({
-                open: true,
-                account: record,
-                duration: null,
-              })
-            }}
-          >
-            禁用
-          </Button>
+      width: 250,
+      render: (_, record) => {
+        const isDisabled = isAccountCurrentlyDisabled(record.disabledUntil)
 
-          <Button
-            size="small"
-            disabled={!record.disabledUntil || isWorking}
-            onClick={() => {
-              setRestoreState({
-                open: true,
-                account: record,
-              })
-            }}
-          >
-            恢复
-          </Button>
+        return (
+          <Space size={6} wrap>
+            <Button
+              size="small"
+              disabled={isDisabled || isWorking}
+              onClick={() => {
+                setDisableState({
+                  open: true,
+                  account: record,
+                  duration: null,
+                })
+              }}
+            >
+              禁用
+            </Button>
 
-          <Button
-            size="small"
-            disabled={isWorking}
-            onClick={async () => {
-              await updateMutation.mutateAsync({
-                id: record.id,
-                reset_password: true,
-              })
-              message.success('密码已重置')
-            }}
-          >
-            重置密码
-          </Button>
-        </Flex>
-      ),
+            <Button
+              size="small"
+              disabled={!isDisabled || isWorking}
+              onClick={() => {
+                setRestoreState({
+                  open: true,
+                  account: record,
+                })
+              }}
+            >
+              恢复
+            </Button>
+
+            <Button
+              size="small"
+              disabled={isWorking}
+              onClick={async () => {
+                try {
+                  await updateMutation.mutateAsync({
+                    id: record.id,
+                    reset_password: true,
+                  })
+                  message.success('密码已重置')
+                }
+                catch (error) {
+                  message.error(resolveErrorMessage(error, '密码重置失败，请稍后再试'))
+                }
+              }}
+            >
+              重置密码
+            </Button>
+          </Space>
+        )
+      },
     },
   ]
 
@@ -212,7 +243,7 @@ export default function AccountPermissionPage() {
     }
 
     if (ONLY_NUMBER_PATTERN.test(trimmed)) {
-      setQueryUid(Number.parseInt(trimmed, 10))
+      setQueryUid(trimmed)
       setNameFilter('')
       return
     }
@@ -224,21 +255,15 @@ export default function AccountPermissionPage() {
   return (
     <Space direction="vertical" size={16} className="w-full">
       <Card>
-        <Flex vertical gap={10}>
-          <Typography.Title level={4} className="!mb-0">
-            账号与权限管理
-          </Typography.Title>
-          <Typography.Text type="secondary">管理账号、禁用恢复、发送系统通知</Typography.Text>
-          <Segmented
-            value={activeTab}
-            options={[
-              { label: '管理与通知', value: 'manage' },
-              { label: '新增账号', value: 'create' },
-            ]}
-            block
-            onChange={value => setActiveTab(value as MainTab)}
-          />
-        </Flex>
+        <Segmented
+          value={activeTab}
+          options={[
+            { label: '管理与通知', value: 'manage' },
+            { label: '新增账号', value: 'create' },
+          ]}
+          block
+          onChange={value => setActiveTab(value as MainTab)}
+        />
       </Card>
 
       {activeTab === 'manage' && (
@@ -270,7 +295,7 @@ export default function AccountPermissionPage() {
               loading={listQuery.isLoading}
               dataSource={displayedAccounts}
               columns={columns}
-              scroll={{ x: 1200 }}
+              tableLayout="fixed"
               pagination={{ pageSize: 8 }}
               locale={{ emptyText: '暂无账号数据' }}
             />
@@ -293,26 +318,35 @@ export default function AccountPermissionPage() {
                 if (autoPassword.length === 6)
                   createForm.setFieldValue('password', autoPassword)
               }
+
+              if (changedValues.userType && changedValues.userType !== 'ADMIN')
+                createForm.setFieldValue('campus', undefined)
             }}
             onFinish={async (values) => {
-              const uid = Number.parseInt(values.userNo, 10)
-              if (!Number.isInteger(uid)) {
+              const username = values.userNo.trim()
+              if (!ONLY_NUMBER_PATTERN.test(username)) {
                 message.warning('学号/工号格式不正确')
                 return
               }
 
-              await createMutation.mutateAsync({
-                id_card: values.idCard,
-                name: values.name,
-                password: values.password,
-                username: uid,
-                user_type: values.userType,
-              })
+              try {
+                await createMutation.mutateAsync({
+                  id_card: values.idCard,
+                  name: values.name,
+                  password: values.password,
+                  username,
+                  user_type: values.userType,
+                  ...(values.userType === 'ADMIN' && values.campus ? { campus: values.campus } : {}),
+                })
 
-              message.success('创建成功')
-              createForm.resetFields()
-              createForm.setFieldValue('userType', 'STUDENT')
-              await reloadList()
+                message.success('创建成功')
+                createForm.resetFields()
+                createForm.setFieldValue('userType', 'STUDENT')
+                await reloadList()
+              }
+              catch (error) {
+                message.error(resolveErrorMessage(error, '创建账号失败，请稍后再试'))
+              }
             }}
           >
             <Form.Item
@@ -368,6 +402,19 @@ export default function AccountPermissionPage() {
               />
             </Form.Item>
 
+            {selectedUserType === 'ADMIN' && (
+              <Form.Item
+                label="所属校区（仅失物招领管理员）"
+                name="campus"
+              >
+                <Select
+                  allowClear
+                  placeholder="请选择所属校区（可选）"
+                  options={CAMPUS_OPTIONS}
+                />
+              </Form.Item>
+            )}
+
             <Form.Item
               label="密码"
               name="password"
@@ -401,13 +448,18 @@ export default function AccountPermissionPage() {
           if (!disableState.account || !disableState.duration)
             return
 
-          await disableMutation.mutateAsync({
-            duration: toDisableDurationParam(disableState.duration),
-            id: disableState.account.id,
-          })
-          message.success('账号已禁用')
-          setDisableState({ open: false, account: null, duration: null })
-          await reloadList()
+          try {
+            await disableMutation.mutateAsync({
+              duration: toDisableDurationParam(disableState.duration),
+              id: disableState.account.id,
+            })
+            message.success('账号已禁用')
+            setDisableState({ open: false, account: null, duration: null })
+            await reloadList()
+          }
+          catch (error) {
+            message.error(resolveErrorMessage(error, '禁用账号失败，请稍后再试'))
+          }
         }}
       >
         <Radio.Group
@@ -433,16 +485,19 @@ export default function AccountPermissionPage() {
           if (!restoreState.account)
             return
 
-          await enableMutation.mutateAsync({ id: restoreState.account.id })
-          message.success('账号已恢复')
-          setRestoreState({ open: false, account: null })
-          await reloadList()
+          try {
+            await enableMutation.mutateAsync({ id: restoreState.account.id })
+            message.success('账号已恢复')
+            setRestoreState({ open: false, account: null })
+            await reloadList()
+          }
+          catch (error) {
+            message.error(resolveErrorMessage(error, '恢复账号失败，请稍后再试'))
+          }
         }}
       >
         <Text>确认恢复该账号？</Text>
       </Modal>
-
-
     </Space>
   )
 }

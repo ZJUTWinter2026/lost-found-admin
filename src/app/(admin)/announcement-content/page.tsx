@@ -8,7 +8,7 @@ import { useAdminPendingDetailQuery, useDeleteAdminPostMutation } from '@/query/
 import { useAnnouncementReviewListQuery, useApproveAnnouncementMutation, usePublishAnnouncementMutation } from '@/query/announcement'
 import { usePostListQuery } from '@/query/post'
 import { queryKeys } from '@/query/query-keys'
-import { formatDate, formatDateTime } from '@/utils/admin-mock'
+import { formatDate, formatDateTime, getBeijingTimestamp } from '@/utils/admin-mock'
 
 const { TextArea } = Input
 
@@ -44,7 +44,7 @@ export default function AnnouncementContentPage() {
 
   const sortedAnnouncements = useMemo(
     () => [...(reviewListQuery.data?.list ?? [])]
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+      .sort((a, b) => getBeijingTimestamp(b.created_at) - getBeijingTimestamp(a.created_at)),
     [reviewListQuery.data?.list],
   )
 
@@ -56,7 +56,7 @@ export default function AnnouncementContentPage() {
   const visibleReviewPosts = useMemo(
     () => (postListQuery.data?.list ?? [])
       .filter(post => toPublishKind(post.publish_type) === postKind)
-      .sort((a, b) => new Date(b.event_time).getTime() - new Date(a.event_time).getTime()),
+      .sort((a, b) => getBeijingTimestamp(b.event_time) - getBeijingTimestamp(a.event_time)),
     [postKind, postListQuery.data?.list],
   )
 
@@ -87,22 +87,16 @@ export default function AnnouncementContentPage() {
   return (
     <Space direction="vertical" size={16} className="w-full">
       <Card>
-        <Flex vertical gap={10}>
-          <Typography.Title level={4} className="!mb-0">
-            公告与内容管理
-          </Typography.Title>
-          <Typography.Text type="secondary">发布全局公告、审核区域公告、审核发布信息</Typography.Text>
-          <Segmented
-            block
-            value={activeTab}
-            options={[
-              { label: '发布全局公告', value: 'global' },
-              { label: '审核区域公告', value: 'regional' },
-              { label: '审核发布信息', value: 'review' },
-            ]}
-            onChange={value => setActiveTab(value as MainTab)}
-          />
-        </Flex>
+        <Segmented
+          block
+          value={activeTab}
+          options={[
+            { label: '发布全局公告', value: 'global' },
+            { label: '审核区域公告', value: 'regional' },
+            { label: '审核发布信息', value: 'review' },
+          ]}
+          onChange={value => setActiveTab(value as MainTab)}
+        />
       </Card>
 
       {activeTab === 'global' && (

@@ -12,7 +12,7 @@ import {
 } from '@/query/admin'
 import { usePostListQuery } from '@/query/post'
 import { queryKeys } from '@/query/query-keys'
-import { formatDateTime } from '@/utils/admin-mock'
+import { formatDateTime, getBeijingTimestamp } from '@/utils/admin-mock'
 
 const { TextArea } = Input
 const { Text, Title } = Typography
@@ -70,7 +70,7 @@ export default function ItemStatusPage() {
   const archiveMutation = useArchiveAdminPostMutation()
 
   const rows = useMemo(
-    () => (postListQuery.data?.list ?? []).sort((a, b) => new Date(b.event_time).getTime() - new Date(a.event_time).getTime()),
+    () => (postListQuery.data?.list ?? []).sort((a, b) => getBeijingTimestamp(b.event_time) - getBeijingTimestamp(a.event_time)),
     [postListQuery.data?.list],
   )
 

@@ -7,7 +7,7 @@ import { useMemo, useState } from 'react'
 import { toCampusName, toPublishKind } from '@/api/shared/transforms'
 import { useAdminPendingDetailQuery } from '@/query/admin'
 import { usePostListQuery } from '@/query/post'
-import { formatDateTime } from '@/utils/admin-mock'
+import { formatDateTime, getBeijingTimestamp, toBeijingDayBoundary } from '@/utils/admin-mock'
 
 const { Text } = Typography
 const { RangePicker } = DatePicker
@@ -132,7 +132,7 @@ export default function InfoMaintenancePage() {
 
         return true
       })
-      .sort((a, b) => new Date(b.event_time).getTime() - new Date(a.event_time).getTime()),
+      .sort((a, b) => getBeijingTimestamp(b.event_time) - getBeijingTimestamp(a.event_time)),
     [allRows, selectedStatus],
   )
 
@@ -154,7 +154,15 @@ export default function InfoMaintenancePage() {
 
   const handleRangeChange: RangePickerProps['onChange'] = (_value, dateStrings) => {
     if (dateStrings[0] && dateStrings[1]) {
-      setSelectedRange([dateStrings[0], dateStrings[1]])
+      const startTime = toBeijingDayBoundary(dateStrings[0], 'start')
+      const endTime = toBeijingDayBoundary(dateStrings[1], 'end')
+
+      if (!startTime || !endTime) {
+        setSelectedRange(undefined)
+        return
+      }
+
+      setSelectedRange([startTime, endTime])
       return
     }
 

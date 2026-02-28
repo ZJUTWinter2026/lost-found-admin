@@ -10,10 +10,10 @@ import { useAdminStatisticsQuery } from '@/query/admin'
 import { usePostListQuery } from '@/query/post'
 import { queryKeys } from '@/query/query-keys'
 import { useSystemConfigQuery, useUpdateClaimValidityDaysMutation, useUpdateFeedbackTypesMutation, useUpdateItemTypesMutation, useUpdatePublishLimitMutation } from '@/query/system'
-import { formatDateTime } from '@/utils/admin-mock'
+import { formatDateTime, toBeijingDayBoundary } from '@/utils/admin-mock'
 
 const { RangePicker } = DatePicker
-const { Text, Title } = Typography
+const { Text } = Typography
 
 type GlobalTab = 'overview' | 'params' | 'permission'
 
@@ -85,7 +85,14 @@ export default function GlobalManagementPage() {
       return
     }
 
-    setSelectedRange([`${start}T00:00:00Z`, `${end}T23:59:59Z`])
+    const startTime = toBeijingDayBoundary(start, 'start')
+    const endTime = toBeijingDayBoundary(end, 'end')
+    if (!startTime || !endTime) {
+      setSelectedRange(undefined)
+      return
+    }
+
+    setSelectedRange([startTime, endTime])
   }
 
   const refreshConfig = async () => {
@@ -97,20 +104,16 @@ export default function GlobalManagementPage() {
   return (
     <Space direction="vertical" size={16} className="w-full">
       <Card>
-        <Flex vertical gap={10}>
-          <Title level={4} className="!mb-0">全局管理</Title>
-          <Text type="secondary">查看统计、维护参数、配置发布权限</Text>
-          <Segmented
-            value={activeTab}
-            options={[
-              { label: '查看信息总览', value: 'overview' },
-              { label: '修改系统参数', value: 'params' },
-              { label: '信息发布权限', value: 'permission' },
-            ]}
-            block
-            onChange={value => setActiveTab(value as GlobalTab)}
-          />
-        </Flex>
+        <Segmented
+          value={activeTab}
+          options={[
+            { label: '查看信息总览', value: 'overview' },
+            { label: '修改系统参数', value: 'params' },
+            { label: '信息发布权限', value: 'permission' },
+          ]}
+          block
+          onChange={value => setActiveTab(value as GlobalTab)}
+        />
       </Card>
 
       {activeTab === 'overview' && (

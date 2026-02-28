@@ -16,33 +16,149 @@ export function buildMockPhoto(title: string, colorStart = '#3b82f6', colorEnd =
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
 }
 
+const BEIJING_TIME_ZONE = 'Asia/Shanghai'
+const ONE_DAY_MS = 24 * 60 * 60 * 1000
+const ONE_MINUTE_MS = 60 * 1000
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/
+const DATE_TIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/
+const TZ_SUFFIX_PATTERN = /(?:Z|[+-]\d{2}:?\d{2})$/i
+
+const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
+  day: '2-digit',
+  month: '2-digit',
+  timeZone: BEIJING_TIME_ZONE,
+  year: 'numeric',
+})
+
+const dateTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
+  day: '2-digit',
+  hour: '2-digit',
+  hour12: false,
+  minute: '2-digit',
+  month: '2-digit',
+  second: '2-digit',
+  timeZone: BEIJING_TIME_ZONE,
+  year: 'numeric',
+})
+
+const dateTimePartsFormatter = new Intl.DateTimeFormat('en-CA', {
+  day: '2-digit',
+  hour: '2-digit',
+  hour12: false,
+  minute: '2-digit',
+  month: '2-digit',
+  second: '2-digit',
+  timeZone: BEIJING_TIME_ZONE,
+  year: 'numeric',
+})
+
+function parseDateInput(value: Date | string | null | undefined) {
+  if (!value)
+    return null
+
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime()))
+      return null
+    return value
+  }
+
+  const trimmed = value.trim()
+  if (!trimmed)
+    return null
+
+  const normalized = trimmed.includes(' ')
+    ? trimmed.replace(' ', 'T')
+    : trimmed
+
+  if (TZ_SUFFIX_PATTERN.test(normalized)) {
+    const normalizedOffset = normalized.replace(/([+-]\d{2})(\d{2})$/, '$1:$2')
+    const parsed = new Date(normalizedOffset)
+    if (!Number.isNaN(parsed.getTime()))
+      return parsed
+  }
+
+  if (DATE_ONLY_PATTERN.test(normalized)) {
+    const parsed = new Date(`${normalized}T00:00:00+08:00`)
+    if (!Number.isNaN(parsed.getTime()))
+      return parsed
+  }
+
+  if (DATE_TIME_PATTERN.test(normalized)) {
+    const withSeconds = normalized.length === 16 ? `${normalized}:00` : normalized
+    const parsed = new Date(`${withSeconds}+08:00`)
+    if (!Number.isNaN(parsed.getTime()))
+      return parsed
+  }
+
+  const parsed = new Date(normalized)
+  if (Number.isNaN(parsed.getTime()))
+    return null
+
+  return parsed
+}
+
+function formatToBeijingOffsetString(date: Date) {
+  const parts = dateTimePartsFormatter.formatToParts(date)
+
+  const map: Partial<Record<'year' | 'month' | 'day' | 'hour' | 'minute' | 'second', string>> = {}
+  parts.forEach((part) => {
+    if (part.type === 'year' || part.type === 'month' || part.type === 'day' || part.type === 'hour' || part.type === 'minute' || part.type === 'second')
+      map[part.type] = part.value
+  })
+
+  return `${map.year}-${map.month}-${map.day}T${map.hour}:${map.minute}:${map.second}+08:00`
+}
+
+function getBeijingTodayStart() {
+  const today = formatToBeijingOffsetString(new Date()).slice(0, 10)
+  return new Date(`${today}T00:00:00+08:00`)
+}
+
 export function createDateByDaysAgo(daysAgo: number, hour: number, minute: number) {
-  const date = new Date()
-  date.setDate(date.getDate() - daysAgo)
-  date.setHours(hour, minute, 0, 0)
-  return date.toISOString()
+  const target = new Date(
+    getBeijingTodayStart().getTime()
+    - (daysAgo * ONE_DAY_MS)
+    + (((hour * 60) + minute) * ONE_MINUTE_MS),
+  )
+
+  return formatToBeijingOffsetString(target)
 }
 
 export function formatDate(value: string) {
-  const formatter = new Intl.DateTimeFormat('zh-CN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  })
+  const parsed = parseDateInput(value)
+  if (!parsed)
+    return '-'
 
-  return formatter.format(new Date(value)).replace(/\//g, '/')
+  return dateFormatter.format(parsed).replace(/\//g, '/')
 }
 
 export function formatDateTime(value: string) {
-  const formatter = new Intl.DateTimeFormat('zh-CN', {
-    day: '2-digit',
-    hour: '2-digit',
-    hour12: false,
-    minute: '2-digit',
-    month: '2-digit',
-    second: '2-digit',
-    year: 'numeric',
-  })
+  const parsed = parseDateInput(value)
+  if (!parsed)
+    return '-'
 
-  return formatter.format(new Date(value)).replace(/\//g, '-')
+  return dateTimeFormatter.format(parsed).replace(/\//g, '-')
+}
+
+export function getBeijingTimestamp(value: Date | string | null | undefined) {
+  const parsed = parseDateInput(value)
+  if (!parsed)
+    return 0
+
+  return parsed.getTime()
+}
+
+export function getNowInBeijing() {
+  return formatToBeijingOffsetString(new Date())
+}
+
+export function toBeijingDayBoundary(date: string, boundary: 'start' | 'end') {
+  const trimmed = date.trim()
+  if (!DATE_ONLY_PATTERN.test(trimmed))
+    return undefined
+
+  if (boundary === 'start')
+    return `${trimmed}T00:00:00+08:00`
+
+  return `${trimmed}T23:59:59+08:00`
 }

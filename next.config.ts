@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next'
 import process from 'node:process'
 
-const DEV_API_PROXY_TARGET = (process.env.NEXT_PUBLIC_DEV_API_PROXY_TARGET || 'http://localhost:8000').replace(/\/$/, '')
+const DEV_API_PROXY_TARGET = (process.env.NEXT_PUBLIC_DEV_API_PROXY_TARGET || 'http://115.190.112.102:8086').replace(/\/$/, '')
 const DEV_API_PROXY_API_BASE = DEV_API_PROXY_TARGET.endsWith('/api')
   ? DEV_API_PROXY_TARGET
   : `${DEV_API_PROXY_TARGET}/api`

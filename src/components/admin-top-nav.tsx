@@ -40,7 +40,7 @@ export function AdminTopNav() {
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-sky-100 bg-white/90 backdrop-blur">
+    <header className="z-30 border-b border-sky-100 bg-white/90 backdrop-blur">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-3 md:grid md:h-16 md:grid-cols-[1fr_auto_1fr] md:items-center md:gap-3 md:px-6 md:py-0">
         <Space align="center" size={10} className="justify-self-start">
           <Button
