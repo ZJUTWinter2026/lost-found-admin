@@ -21,7 +21,8 @@ export function getAdminPendingPostList(params: AdminPendingListRequest = {}) {
 export function getAdminPostDetail(postId: number) {
   return request<AdminPostDetail>({
     method: 'GET',
-    url: `/admin/detail/${postId}`,
+    params: { post_id: postId },
+    url: '/admin/detail',
   })
 }
 

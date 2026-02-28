@@ -40,7 +40,7 @@ export default function DataManagementPage() {
   const [isDisableModalOpen, setIsDisableModalOpen] = useState(false)
   const [disableDuration, setDisableDuration] = useState<DisableDuration | null>(null)
 
-  const postListQuery = usePostListQuery({ page: 1, page_size: 300 })
+  const postListQuery = usePostListQuery({ page: 1, page_size: 20 })
   const feedbackListQuery = useFeedbackListQuery()
   const feedbackDetailQuery = useFeedbackDetailQuery(selectedFeedbackId)
 
@@ -117,7 +117,7 @@ export default function DataManagementPage() {
                 >
                   <Flex justify="space-between" align="center" className="w-full gap-2">
                     <Space wrap>
-                      <Tag color="blue">{item.item_type_other || item.item_type}</Tag>
+                      <Tag color="blue">{item.item_type}</Tag>
                       <Typography.Text>{item.item_name}</Typography.Text>
                       <Typography.Text type="secondary">
                         {toCampusName(item.campus) ?? item.campus}
@@ -151,7 +151,7 @@ export default function DataManagementPage() {
                   >
                     <Flex justify="space-between" align="center" className="w-full gap-2">
                       <Space wrap>
-                        <Tag color="warning">{feedback.type_other || feedback.type}</Tag>
+                        <Tag color="warning">{feedback.type}</Tag>
                         <Typography.Text>
                           举报人ID：
                           {feedback.reporter_id}
@@ -174,7 +174,7 @@ export default function DataManagementPage() {
                     column={1}
                     title="投诉与反馈"
                     items={[
-                      { key: 'type', label: '投诉类型', children: selectedFeedback.type_other || selectedFeedback.type },
+                      { key: 'type', label: '投诉类型', children: selectedFeedback.type },
                       { key: 'time', label: '时间', children: formatDateTime(selectedFeedback.created_at) },
                       { key: 'desc', label: '说明', children: selectedFeedback.description },
                       { key: 'user', label: '投诉人', children: `用户ID ${selectedFeedback.reporter_id}` },

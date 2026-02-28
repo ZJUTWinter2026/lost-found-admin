@@ -3,7 +3,6 @@ export {
   disableAccount,
   enableAccount,
   getAccountList,
-  sendSystemNotification,
   updateAccount,
 } from './requests'
 export type {
@@ -14,7 +13,5 @@ export type {
   CreateAccountResponse,
   DisableAccountRequest,
   EnableAccountRequest,
-  SendNotificationRequest,
-  SendNotificationResponse,
   UpdateAccountRequest,
 } from './types'

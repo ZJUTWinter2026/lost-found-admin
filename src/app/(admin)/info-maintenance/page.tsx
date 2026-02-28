@@ -65,7 +65,7 @@ function buildStatisticsRows(source: PostListItem[]): StatisticsRow[] {
 
   const grouped = new Map<string, PostListItem[]>()
   source.forEach((item) => {
-    const key = item.item_type_other || item.item_type
+    const key = item.item_type
     const list = grouped.get(key) ?? []
     list.push(item)
     grouped.set(key, list)
@@ -297,7 +297,7 @@ export default function InfoMaintenancePage() {
                     <Flex justify="space-between" align="center" wrap>
                       <Space size={8}>
                         <Text strong>{item.item_name}</Text>
-                        <Tag color="blue">{item.item_type_other || item.item_type}</Tag>
+                        <Tag color="blue">{item.item_type}</Tag>
                       </Space>
 
                       <Space size={8}>
@@ -343,7 +343,7 @@ export default function InfoMaintenancePage() {
                     size="small"
                     column={1}
                     items={[
-                      { label: '物品类型', children: detailQuery.data.item_type_other || detailQuery.data.item_type },
+                      { label: '物品类型', children: detailQuery.data.item_type },
                       { label: '名称', children: detailQuery.data.item_name },
                       {
                         label: '物品状态',

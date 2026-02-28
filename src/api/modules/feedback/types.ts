@@ -1,7 +1,7 @@
 export interface FeedbackListRequest {
   page?: number
   page_size?: number
-  processed?: boolean
+  processed: 'ALL' | 'YES' | 'NO'
 }
 
 export interface FeedbackListItem {
@@ -14,7 +14,6 @@ export interface FeedbackListItem {
   processed_by?: number
   reporter_id: number
   type: string
-  type_other: string
 }
 
 export interface FeedbackListResponse {
@@ -46,7 +45,6 @@ export interface FeedbackDetail {
   processed_by?: number
   reporter_id: number
   type: string
-  type_other: string
 }
 
 export interface ProcessFeedbackRequest {

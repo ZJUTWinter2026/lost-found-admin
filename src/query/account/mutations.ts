@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import { createAccount, disableAccount, enableAccount, sendSystemNotification, updateAccount } from '@/api/modules/account'
+import { createAccount, disableAccount, enableAccount, updateAccount } from '@/api/modules/account'
 
 export function useCreateAccountMutation() {
   return useMutation({
@@ -22,11 +22,5 @@ export function useEnableAccountMutation() {
 export function useUpdateAccountMutation() {
   return useMutation({
     mutationFn: updateAccount,
-  })
-}
-
-export function useSendSystemNotificationMutation() {
-  return useMutation({
-    mutationFn: sendSystemNotification,
   })
 }

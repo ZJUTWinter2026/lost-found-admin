@@ -64,7 +64,7 @@ export default function AnnouncementContentPage() {
     if (!selectedAnnouncement)
       return
 
-    await approveMutation.mutateAsync({ id: selectedAnnouncement.id })
+    await approveMutation.mutateAsync({ approve: true, id: selectedAnnouncement.id })
     message.success('区域公告审核通过')
 
     await queryClient.invalidateQueries({ queryKey: queryKeys.announcement.reviewList() })
@@ -220,7 +220,7 @@ export default function AnnouncementContentPage() {
                       <Space wrap>
                         <Tag color={toPublishKind(post.publish_type) === 'lost' ? 'gold' : 'blue'}>{KIND_LABEL[toPublishKind(post.publish_type)]}</Tag>
                         <Typography.Text>{post.item_name}</Typography.Text>
-                        <Typography.Text type="secondary">{post.item_type_other || post.item_type}</Typography.Text>
+                        <Typography.Text type="secondary">{post.item_type}</Typography.Text>
                       </Space>
                       <Typography.Text type="secondary">{formatDateTime(post.event_time)}</Typography.Text>
                     </Flex>
@@ -239,7 +239,7 @@ export default function AnnouncementContentPage() {
                     column={{ xs: 1, md: 2 }}
                     items={[
                       { key: 'kind', label: '发布类型', children: KIND_LABEL[toPublishKind(postDetailQuery.data.publish_type)] },
-                      { key: 'type', label: '物品类型', children: postDetailQuery.data.item_type_other || postDetailQuery.data.item_type },
+                      { key: 'type', label: '物品类型', children: postDetailQuery.data.item_type },
                       { key: 'name', label: '名称', children: postDetailQuery.data.item_name },
                       { key: 'status', label: '物品状态', children: postDetailQuery.data.status },
                       { key: 'features', label: '描述特征', children: postDetailQuery.data.features },

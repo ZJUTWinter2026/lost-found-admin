@@ -5,8 +5,6 @@ import type {
   CreateAccountResponse,
   DisableAccountRequest,
   EnableAccountRequest,
-  SendNotificationRequest,
-  SendNotificationResponse,
   UpdateAccountRequest,
 } from './types'
 import { request } from '@/api/core/request'
@@ -51,10 +49,4 @@ export function updateAccount(payload: UpdateAccountRequest) {
   })
 }
 
-export function sendSystemNotification(payload: SendNotificationRequest) {
-  return request<SendNotificationResponse>({
-    data: payload,
-    method: 'POST',
-    url: '/account/notification',
-  })
-}
+

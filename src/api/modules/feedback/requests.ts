@@ -7,7 +7,7 @@ import type {
 } from './types'
 import { request } from '@/api/core/request'
 
-export function getFeedbackList(params: FeedbackListRequest = {}) {
+export function getFeedbackList(params: FeedbackListRequest) {
   return request<FeedbackListResponse>({
     method: 'GET',
     params,

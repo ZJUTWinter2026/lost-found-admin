@@ -1,5 +1,7 @@
 export {
   approveAnnouncement,
+  deleteAnnouncement,
+  getAnnouncementAllList,
   getAnnouncementList,
   getAnnouncementReviewList,
   publishAnnouncement,
@@ -9,6 +11,7 @@ export type {
   AnnouncementListRequest,
   AnnouncementListResponse,
   ApproveAnnouncementRequest,
+  DeleteAnnouncementRequest,
   PublishAnnouncementRequest,
   PublishAnnouncementResponse,
 } from './types'

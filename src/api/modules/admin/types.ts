@@ -32,10 +32,10 @@ export interface AdminPostDetail {
   images: string[]
   item_name: string
   item_type: string
-  item_type_other: string
   location: string
   publish_type: string
   publisher_id: number
+  reward_description: string
   status: string
 }
 
@@ -58,5 +58,5 @@ export interface AdminOperationResponse {
 export interface AdminStatisticsResponse {
   status_counts: Record<string, number>
   type_counts: Record<string, number>
-  type_percentage: Record<string, number>
+  type_percentage: Record<string, string>
 }

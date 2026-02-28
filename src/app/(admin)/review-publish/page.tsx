@@ -55,7 +55,7 @@ function toHistoryItem(detail: AdminPostDetail, result: ReviewResult, reason?: s
   return {
     id: detail.id,
     itemName: detail.item_name,
-    itemType: detail.item_type_other || detail.item_type,
+    itemType: detail.item_type,
     kind: toPublishKind(detail.publish_type),
     contactName: detail.contact_name,
     contactPhone: detail.contact_phone,
@@ -294,7 +294,7 @@ export default function ReviewPublishPage() {
                   size="small"
                   items={[
                     { label: '发布类型', children: KIND_LABEL[toPublishKind(currentPendingDetail.publish_type)] },
-                    { label: '物品类型', children: currentPendingDetail.item_type_other || currentPendingDetail.item_type },
+                    { label: '物品类型', children: currentPendingDetail.item_type },
                     { label: '物品名称', children: currentPendingDetail.item_name },
                     { label: '地点', children: currentPendingDetail.location },
                     { label: '事件时间', children: formatDateTime(currentPendingDetail.event_time) },

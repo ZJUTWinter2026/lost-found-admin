@@ -1,6 +1,6 @@
 export const queryKeys = {
   account: {
-    list: (params?: { uid?: number }) => ['account', 'list', params?.uid ?? null] as const,
+    list: (params?: { username?: number }) => ['account', 'list', params?.username ?? null] as const,
   },
   admin: {
     pendingDetail: (postId?: number | null) => ['admin', 'pending-detail', postId ?? null] as const,

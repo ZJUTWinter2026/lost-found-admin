@@ -16,13 +16,14 @@ export interface PostListItem {
   campus: string
   event_time: string
   features: string
+  has_reward: boolean
   id: number
   images: string[]
   item_name: string
   item_type: string
-  item_type_other: string
   location: string
   publish_type: string
+  reward_description: string
   status: string
 }
 

@@ -10,7 +10,6 @@ import {
   useCreateAccountMutation,
   useDisableAccountMutation,
   useEnableAccountMutation,
-  useSendSystemNotificationMutation,
   useUpdateAccountMutation,
 } from '@/query/account'
 import { queryKeys } from '@/query/query-keys'
@@ -26,7 +25,7 @@ interface AccountRow {
   disabledUntil: string | null
   id: number
   name: string
-  uid: number
+  username: number
   userType: string
 }
 
@@ -39,14 +38,6 @@ interface DisableModalState {
 interface RestoreModalState {
   account: AccountRow | null
   open: boolean
-}
-
-interface NoticeModalState {
-  account: AccountRow | null
-  content: string
-  open: boolean
-  sendType: 'all' | 'single'
-  title: string
 }
 
 interface CreateAccountValues {
@@ -85,14 +76,6 @@ export default function AccountPermissionPage() {
     open: false,
     account: null,
   })
-  const [noticeState, setNoticeState] = useState<NoticeModalState>({
-    open: false,
-    account: null,
-    content: '',
-    sendType: 'single',
-    title: '系统通知',
-  })
-
   const [createForm] = Form.useForm<CreateAccountValues>()
 
   const listQuery = useAccountListQuery(queryUid)
@@ -100,20 +83,18 @@ export default function AccountPermissionPage() {
   const disableMutation = useDisableAccountMutation()
   const enableMutation = useEnableAccountMutation()
   const updateMutation = useUpdateAccountMutation()
-  const sendNotificationMutation = useSendSystemNotificationMutation()
 
   const isWorking = createMutation.isPending
     || disableMutation.isPending
     || enableMutation.isPending
     || updateMutation.isPending
-    || sendNotificationMutation.isPending
 
   const accountRows = useMemo<AccountRow[]>(
     () => (listQuery.data?.list ?? []).map(item => ({
       disabledUntil: normalizeDateTime(item.disabled_until),
       id: item.id,
       name: item.name,
-      uid: item.uid,
+      username: item.username,
       userType: item.user_type,
     })),
     [listQuery.data?.list],
@@ -132,8 +113,8 @@ export default function AccountPermissionPage() {
   const columns: ColumnsType<AccountRow> = [
     {
       title: '工号/学号',
-      dataIndex: 'uid',
-      key: 'uid',
+      dataIndex: 'username',
+      key: 'username',
       width: 120,
     },
     {
@@ -205,30 +186,11 @@ export default function AccountPermissionPage() {
               await updateMutation.mutateAsync({
                 id: record.id,
                 reset_password: true,
-                user_type: record.userType as AccountUserType,
               })
               message.success('密码已重置')
             }}
           >
             重置密码
-          </Button>
-
-          <Button
-            size="small"
-            type="primary"
-            ghost
-            disabled={isWorking}
-            onClick={() => {
-              setNoticeState({
-                open: true,
-                account: record,
-                content: '',
-                sendType: 'single',
-                title: '系统通知',
-              })
-            }}
-          >
-            发送系统通知
           </Button>
         </Flex>
       ),
@@ -236,7 +198,7 @@ export default function AccountPermissionPage() {
   ]
 
   const reloadList = async () => {
-    await queryClient.invalidateQueries({ queryKey: queryKeys.account.list({ uid: queryUid }) })
+    await queryClient.invalidateQueries({ queryKey: queryKeys.account.list({ username: queryUid }) })
     await queryClient.invalidateQueries({ queryKey: ['account', 'list'] })
   }
 
@@ -292,19 +254,6 @@ export default function AccountPermissionPage() {
               <Button type="primary" onClick={handleQuery}>查询</Button>
               <Button
                 onClick={() => {
-                  setNoticeState({
-                    open: true,
-                    account: null,
-                    content: '',
-                    sendType: 'all',
-                    title: '系统通知',
-                  })
-                }}
-              >
-                发送全体系统通知
-              </Button>
-              <Button
-                onClick={() => {
                   setQueryUid(undefined)
                   setNameFilter('')
                   setSearchKeyword('')
@@ -356,7 +305,7 @@ export default function AccountPermissionPage() {
                 id_card: values.idCard,
                 name: values.name,
                 password: values.password,
-                uid,
+                username: uid,
                 user_type: values.userType,
               })
 
@@ -493,59 +442,7 @@ export default function AccountPermissionPage() {
         <Text>确认恢复该账号？</Text>
       </Modal>
 
-      <Modal
-        title={noticeState.sendType === 'all' ? '发送全体系统通知' : `发送系统通知：${noticeState.account?.name ?? ''}`}
-        open={noticeState.open}
-        okText="确认"
-        cancelText="返回"
-        okButtonProps={{ disabled: !noticeState.content.trim(), loading: sendNotificationMutation.isPending }}
-        onCancel={() => {
-          if (sendNotificationMutation.isPending)
-            return
 
-          setNoticeState(prev => ({
-            ...prev,
-            open: false,
-            account: null,
-            content: '',
-          }))
-        }}
-        onOk={async () => {
-          if (!noticeState.content.trim())
-            return
-
-          await sendNotificationMutation.mutateAsync({
-            content: noticeState.content.trim(),
-            is_global: noticeState.sendType === 'all',
-            title: noticeState.title.trim() || '系统通知',
-            user_id: noticeState.sendType === 'single' ? noticeState.account?.id : undefined,
-          })
-
-          message.success(noticeState.sendType === 'all' ? '全体系统通知已发送' : '系统通知已发送')
-          setNoticeState(prev => ({
-            ...prev,
-            open: false,
-            account: null,
-            content: '',
-          }))
-        }}
-      >
-        <Space direction="vertical" size={10} className="w-full">
-          <Input
-            maxLength={100}
-            value={noticeState.title}
-            placeholder="通知标题（最多100字）"
-            onChange={event => setNoticeState(prev => ({ ...prev, title: event.target.value }))}
-          />
-          <Input.TextArea
-            maxLength={1000}
-            rows={6}
-            value={noticeState.content}
-            placeholder="请输入通知内容（最多1000字）"
-            onChange={event => setNoticeState(prev => ({ ...prev, content: event.target.value }))}
-          />
-        </Space>
-      </Modal>
     </Space>
   )
 }

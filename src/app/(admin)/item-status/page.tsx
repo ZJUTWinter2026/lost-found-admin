@@ -193,7 +193,7 @@ export default function ItemStatusPage() {
                       <Tag color={STATUS_COLOR[resolveFlowStatus(item.status)]}>{STATUS_LABEL[resolveFlowStatus(item.status)]}</Tag>
                     </Flex>
 
-                    <Text type="secondary">{item.item_type_other || item.item_type}</Text>
+                    <Text type="secondary">{item.item_type}</Text>
 
                     <Text type="secondary">
                       地点：
@@ -239,7 +239,7 @@ export default function ItemStatusPage() {
                         </Tag>
                       ),
                     },
-                    { label: '物品类型', children: currentDetail.item_type_other || currentDetail.item_type },
+                    { label: '物品类型', children: currentDetail.item_type },
                     { label: '物品名称', children: currentDetail.item_name },
                     { label: '地点', children: currentDetail.location },
                     { label: '时间', children: formatDateTime(currentDetail.event_time) },

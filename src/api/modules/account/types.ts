@@ -1,7 +1,7 @@
 export interface AccountListRequest {
   page?: number
   page_size?: number
-  uid?: number
+  username?: number
   user_type?: 'STUDENT' | 'ADMIN' | 'SYSTEM_ADMIN'
 }
 
@@ -11,7 +11,7 @@ export interface AccountListItem {
   first_login: boolean
   id: number
   name: string
-  uid: number
+  username: number
   user_type: string
 }
 
@@ -23,10 +23,11 @@ export interface AccountListResponse {
 }
 
 export interface CreateAccountRequest {
+  campus?: string
   id_card: string
   name: string
-  password: string
-  uid: number
+  password?: string
+  username: number
   user_type: 'STUDENT' | 'ADMIN' | 'SYSTEM_ADMIN'
 }
 
@@ -44,18 +45,8 @@ export interface EnableAccountRequest {
 }
 
 export interface UpdateAccountRequest {
+  campus?: string
   id: number
-  reset_password: boolean
-  user_type: 'STUDENT' | 'ADMIN' | 'SYSTEM_ADMIN'
-}
-
-export interface SendNotificationRequest {
-  content: string
-  is_global: boolean
-  title: string
-  user_id?: number
-}
-
-export interface SendNotificationResponse {
-  id: number
+  reset_password?: boolean
+  user_type?: 'STUDENT' | 'ADMIN' | 'SYSTEM_ADMIN'
 }

@@ -4,7 +4,7 @@ import { queryKeys } from '@/query/query-keys'
 
 export function useFeedbackListQuery() {
   return useQuery({
-    queryFn: () => getFeedbackList({ page: 1, page_size: 20 }),
+    queryFn: () => getFeedbackList({ page: 1, page_size: 20, processed: 'ALL' }),
     queryKey: queryKeys.feedback.list(),
   })
 }

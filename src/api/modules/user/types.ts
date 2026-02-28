@@ -4,7 +4,9 @@ export interface UserLoginRequest {
 }
 
 export interface UserLoginResponse {
+  campus: string
   id: number
+  name: string
   need_update: boolean
   token: string
   user_type: string

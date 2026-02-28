@@ -205,7 +205,7 @@ export default function GlobalManagementPage() {
                 >
                   <Flex justify="space-between" align="center" className="w-full gap-2">
                     <Space wrap>
-                      <Tag color="blue">{item.item_type_other || item.item_type}</Tag>
+                      <Tag color="blue">{item.item_type}</Tag>
                       <Text>{item.item_name}</Text>
                       <Text type="secondary">
                         {toCampusName(item.campus) ?? item.campus}
