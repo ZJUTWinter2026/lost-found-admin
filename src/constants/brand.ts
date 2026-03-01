@@ -1,0 +1,5 @@
+export const BRAND_NAME = '失物招领管理端'
+export const BRAND_ENGLISH_NAME = 'LOST & FOUND ADMIN'
+export const BRAND_DESCRIPTION = '失物招领管理端，面向审核、招领与账号权限管理。'
+export const BRAND_LOGO_PATH = '/lost-found-logo.svg'
+export const BRAND_FAVICON_PATH = '/favicon.ico?v=20260301'

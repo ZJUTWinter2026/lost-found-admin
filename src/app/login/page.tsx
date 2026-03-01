@@ -4,11 +4,12 @@ import { App, Button, Card, Form, Input, Modal, Space, Typography } from 'antd'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { resolveErrorMessage } from '@/api/core/errors'
+import { BrandLogo } from '@/components/brand-logo'
 import { getDefaultRouteByRole } from '@/constants/admin-access'
 import { useLoginMutation, useResetPasswordMutation } from '@/query/auth'
 import { useAuthStore } from '@/stores/use-auth-store'
 
-const { Text, Title } = Typography
+const { Text } = Typography
 
 const PASSWORD_RULE_TEXT = '密码由 6 - 16 位字母（区分大小写）、数字或符号组成'
 const PASSWORD_PATTERN = /^\S{6,16}$/
@@ -108,13 +109,8 @@ export default function LoginPage() {
           },
         }}
       >
-        <div className="mb-7 space-y-2 text-center">
-          <Text className="text-xs tracking-[0.24em] text-slate-500">
-            LOST & FOUND ADMIN
-          </Text>
-          <Title level={3} className="!m-0 !text-slate-900">
-            失物招领管理平台
-          </Title>
+        <div className="mb-7 flex justify-center">
+          <BrandLogo showEnglishName />
         </div>
 
         <Form
@@ -154,13 +150,13 @@ export default function LoginPage() {
             onClick={openForgotModal}
             className="cursor-pointer bg-transparent text-sm text-slate-500 transition hover:text-slate-900"
           >
-            忘记密码
+            修改密码
           </button>
         </div>
       </Card>
 
       <Modal
-        title="忘记密码"
+        title="修改密码"
         open={isForgotOpen}
         onCancel={closeForgotModal}
         onOk={() => forgotPasswordForm.submit()}

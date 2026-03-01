@@ -2,9 +2,10 @@
 
 import type { MenuProps } from 'antd'
 import { LogoutOutlined } from '@ant-design/icons'
-import { Button, Menu, Modal, Space, Typography } from 'antd'
+import { Button, Menu, Modal } from 'antd'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { BrandLogo } from '@/components/brand-logo'
 import { getAdminNavByRole } from '@/constants/admin-access'
 import { useAuthStore } from '@/stores/use-auth-store'
 
@@ -41,13 +42,9 @@ export function AdminTopNav() {
   return (
     <header className="z-30 border-b border-sky-100 bg-white/90 backdrop-blur">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-3 md:grid md:h-16 md:grid-cols-[1fr_auto_1fr] md:items-center md:gap-3 md:px-6 md:py-0">
-        <Space align="center" size={10} className="justify-self-start">
-          <div className="flex items-center gap-2">
-            <Typography.Title level={5} className="!mb-0 !text-slate-900">
-              失物招领管理平台
-            </Typography.Title>
-          </div>
-        </Space>
+        <div className="justify-self-start">
+          <BrandLogo compact />
+        </div>
 
         <div className="order-3 overflow-x-auto md:order-none md:overflow-visible">
           <Menu
