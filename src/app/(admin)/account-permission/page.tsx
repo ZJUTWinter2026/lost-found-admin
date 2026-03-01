@@ -20,9 +20,8 @@ const { Text } = Typography
 
 type MainTab = 'manage' | 'create'
 type DisableDuration = '7d' | '1m' | '6m' | '1y'
-type AccountUserType = 'STUDENT' | 'SYSTEM_ADMIN'
-// 下线：普通管理员专属校区配置（保留注释便于恢复）
-// type CampusCode = 'ZHAO_HUI' | 'PING_FENG' | 'MO_GAN_SHAN'
+type AccountUserType = 'STUDENT' | 'ADMIN' | 'SYSTEM_ADMIN'
+type CampusCode = 'ZHAO_HUI' | 'PING_FENG' | 'MO_GAN_SHAN'
 
 interface AccountRow {
   disabledUntil: string | null
@@ -44,8 +43,7 @@ interface RestoreModalState {
 }
 
 interface CreateAccountValues {
-  // 下线：普通管理员专属字段（保留注释便于恢复）
-  // campus?: CampusCode
+  campus?: CampusCode
   idCard: string
   name: string
   password: string
@@ -61,12 +59,11 @@ const DISABLE_DURATION_OPTIONS: { label: string, value: DisableDuration }[] = [
   { label: '半年', value: '6m' },
   { label: '1年', value: '1y' },
 ]
-// 下线：普通管理员专属校区选项（保留注释便于恢复）
-// const CAMPUS_OPTIONS: { label: string, value: CampusCode }[] = [
-//   { label: '朝晖', value: 'ZHAO_HUI' },
-//   { label: '屏峰', value: 'PING_FENG' },
-//   { label: '莫干山', value: 'MO_GAN_SHAN' },
-// ]
+const CAMPUS_OPTIONS: { label: string, value: CampusCode }[] = [
+  { label: '朝晖', value: 'ZHAO_HUI' },
+  { label: '屏峰', value: 'PING_FENG' },
+  { label: '莫干山', value: 'MO_GAN_SHAN' },
+]
 
 function isAccountCurrentlyDisabled(disabledUntil: string | null): disabledUntil is string {
   if (!disabledUntil)
@@ -99,8 +96,7 @@ export default function AccountPermissionPage() {
     account: null,
   })
   const [createForm] = Form.useForm<CreateAccountValues>()
-  // 下线：普通管理员专属表单监听（保留注释便于恢复）
-  // const selectedUserType = Form.useWatch('userType', createForm)
+  const selectedUserType = Form.useWatch('userType', createForm)
 
   const listQuery = useAccountListQuery(queryUid)
   const createMutation = useCreateAccountMutation()
@@ -324,9 +320,8 @@ export default function AccountPermissionPage() {
                   createForm.setFieldValue('password', autoPassword)
               }
 
-              // 下线：普通管理员专属校区联动（保留注释便于恢复）
-              // if (changedValues.userType && changedValues.userType !== 'ADMIN')
-              //   createForm.setFieldValue('campus', undefined)
+              if (changedValues.userType && changedValues.userType !== 'ADMIN')
+                createForm.setFieldValue('campus', undefined)
             }}
             onFinish={async (values) => {
               const username = values.userNo.trim()
@@ -342,8 +337,7 @@ export default function AccountPermissionPage() {
                   password: values.password,
                   username,
                   user_type: values.userType,
-                  // 下线：普通管理员专属字段提交（保留注释便于恢复）
-                  // ...(values.userType === 'ADMIN' && values.campus ? { campus: values.campus } : {}),
+                  ...(values.userType === 'ADMIN' && values.campus ? { campus: values.campus } : {}),
                 })
 
                 message.success('创建成功')
@@ -403,15 +397,13 @@ export default function AccountPermissionPage() {
               <Select
                 options={[
                   { label: '学生', value: 'STUDENT' },
-                  // 下线：普通管理员身份选项（保留注释便于恢复）
-                  // { label: '失物招领管理员', value: 'ADMIN' },
+                  { label: '失物招领管理员', value: 'ADMIN' },
                   { label: '系统管理员', value: 'SYSTEM_ADMIN' },
                 ]}
               />
             </Form.Item>
 
-            {/* 下线：普通管理员专属校区字段（保留注释便于恢复） */}
-            {/* {selectedUserType === 'ADMIN' && (
+            {selectedUserType === 'ADMIN' && (
               <Form.Item
                 label="所属校区（仅失物招领管理员）"
                 name="campus"
@@ -422,7 +414,7 @@ export default function AccountPermissionPage() {
                   options={CAMPUS_OPTIONS}
                 />
               </Form.Item>
-            )} */}
+            )}
 
             <Form.Item
               label="密码"

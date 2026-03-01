@@ -1,4 +1,4 @@
-export type AdminRole = 'system_admin'
+export type AdminRole = 'lost_found_admin' | 'system_admin'
 
 export interface AdminNavItem {
   key: string
@@ -6,17 +6,15 @@ export interface AdminNavItem {
 }
 
 export const ADMIN_ROLE_LABEL: Record<AdminRole, string> = {
-  // 下线：普通管理员角色（保留注释便于恢复）
-  // lost_found_admin: '失物招领管理员',
+  lost_found_admin: '失物招领管理员',
   system_admin: '系统管理员',
 }
 
 export const ADMIN_NAV_BY_ROLE: Record<AdminRole, AdminNavItem[]> = {
-  // 下线：普通管理员导航（保留注释便于恢复）
-  // lost_found_admin: [
-  //   { key: '/review-publish', label: '审核发布信息' },
-  //   { key: '/item-status', label: '管理物品状态' },
-  // ],
+  lost_found_admin: [
+    { key: '/review-publish', label: '审核发布信息' },
+    { key: '/item-status', label: '管理物品状态' },
+  ],
   system_admin: [
     { key: '/global-management', label: '全局管理' },
     { key: '/account-permission', label: '账号与权限管理' },
@@ -25,14 +23,12 @@ export const ADMIN_NAV_BY_ROLE: Record<AdminRole, AdminNavItem[]> = {
 }
 
 export const DEFAULT_ROUTE_BY_ROLE: Record<AdminRole, string> = {
-  // 下线：普通管理员默认路由（保留注释便于恢复）
-  // lost_found_admin: '/review-publish',
+  lost_found_admin: '/review-publish',
   system_admin: '/global-management',
 }
 
 const ADMIN_ALLOWED_ROUTE_PREFIXES: Record<AdminRole, string[]> = {
-  // 下线：普通管理员可访问路由（保留注释便于恢复）
-  // lost_found_admin: ['/review-publish', '/item-status'],
+  lost_found_admin: ['/review-publish', '/item-status'],
   system_admin: ['/global-management', '/account-permission', '/announcement-content'],
 }
 

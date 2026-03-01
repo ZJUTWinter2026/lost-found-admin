@@ -3,9 +3,7 @@ import { buildMockPhoto, createDateByDaysAgo } from '@/utils/admin-mock'
 export type PublishKind = 'lost' | 'found'
 export type ItemStatus = 'unmatched' | 'matched' | 'claimed' | 'archived' | 'pending_deleted' | 'approved_canceled'
 export type Campus = '朝晖' | '屏峰' | '莫干山'
-export type AccountRole = 'student' | 'teacher' | 'system_admin'
-// 下线：普通管理员 mock 角色（保留注释便于恢复）
-// export type AccountRole = 'student' | 'teacher' | 'lost_found_admin' | 'system_admin'
+export type AccountRole = 'student' | 'teacher' | 'lost_found_admin' | 'system_admin'
 export type AnnouncementStatus = 'pending' | 'approved'
 
 export interface SystemItem {
@@ -291,9 +289,8 @@ export const SYSTEM_ACCOUNTS: AccountRecord[] = [
   { id: 'acc-2', userNo: '20230002', name: '李洋', idCard: '330102200001018765', role: 'student', disabledUntil: null },
   { id: 'acc-3', userNo: '100201', name: '王敏', idCard: '330102198901022233', role: 'teacher', disabledUntil: null },
   { id: 'acc-4', userNo: '100202', name: '何静', idCard: '330102198803011122', role: 'teacher', disabledUntil: null },
-  // 下线：普通管理员 mock 账号（保留注释便于恢复）
-  // { id: 'acc-5', userNo: '300101', name: '赵强', idCard: '330102198605013344', role: 'lost_found_admin', disabledUntil: null },
-  // { id: 'acc-6', userNo: '300102', name: '陈雨', idCard: '330102198707028899', role: 'lost_found_admin', disabledUntil: null },
+  { id: 'acc-5', userNo: '300101', name: '赵强', idCard: '330102198605013344', role: 'lost_found_admin', disabledUntil: null },
+  { id: 'acc-6', userNo: '300102', name: '陈雨', idCard: '330102198707028899', role: 'lost_found_admin', disabledUntil: null },
   { id: 'acc-7', userNo: '900001', name: '系统总管', idCard: '330102197901016666', role: 'system_admin', disabledUntil: null },
   { id: 'acc-8', userNo: '20230009', name: '高飞', idCard: '330102200212126666', role: 'student', disabledUntil: createDateByDaysAgo(-6, 12, 0) },
 ]

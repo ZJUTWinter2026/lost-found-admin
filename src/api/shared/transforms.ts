@@ -19,22 +19,17 @@ const API_TO_CAMPUS_MAP: Record<string, CampusName> = {
 }
 
 const USER_TYPE_TO_ROLE_MAP: Record<string, AdminRole> = {
-  // 下线：普通管理员登录映射（保留注释便于恢复）
-  // ADMIN: 'lost_found_admin',
+  ADMIN: 'lost_found_admin',
   SYSTEM_ADMIN: 'system_admin',
 }
 
 const ROLE_TO_USER_TYPE_MAP: Record<AdminRole, string> = {
-  // 下线：普通管理员反向映射（保留注释便于恢复）
-  // lost_found_admin: 'ADMIN',
+  lost_found_admin: 'ADMIN',
   system_admin: 'SYSTEM_ADMIN',
 }
 
 const ACCOUNT_ROLE_LABEL_MAP: Record<string, string> = {
-  // 下线：普通管理员身份文案（保留注释便于恢复）
-  // ADMIN: '失物招领管理员',
-  // 兼容：历史普通管理员账号统一按学生显示
-  ADMIN: '学生',
+  ADMIN: '失物招领管理员',
   STUDENT: '学生',
   SYSTEM_ADMIN: '系统管理员',
 }
