@@ -68,7 +68,7 @@ const DISABLE_DURATION_OPTIONS: { label: string, value: DisableDuration }[] = [
 //   { label: '莫干山', value: 'MO_GAN_SHAN' },
 // ]
 
-function isAccountCurrentlyDisabled(disabledUntil: string | null) {
+function isAccountCurrentlyDisabled(disabledUntil: string | null): disabledUntil is string {
   if (!disabledUntil)
     return false
 
@@ -159,7 +159,8 @@ export default function AccountPermissionPage() {
       key: 'status',
       width: 200,
       render: (_, record) => {
-        const isDisabled = isAccountCurrentlyDisabled(record.disabledUntil)
+        const disabledUntil = record.disabledUntil
+        const isDisabled = isAccountCurrentlyDisabled(disabledUntil)
 
         if (!isDisabled)
           return <Tag color="success">正常</Tag>
@@ -167,7 +168,7 @@ export default function AccountPermissionPage() {
         return (
           <Tag color="warning">
             禁用至
-            {formatDateTime(record.disabledUntil)}
+            {formatDateTime(disabledUntil)}
           </Tag>
         )
       },
