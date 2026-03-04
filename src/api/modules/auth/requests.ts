@@ -1,6 +1,6 @@
-import type { LoginRequest, LoginResponse, ResetPasswordRequest, ResetPasswordResponse } from './types'
+import type { ForgotPasswordRequest, ForgotPasswordResponse, LoginRequest, LoginResponse, ResetPasswordRequest, ResetPasswordResponse } from './types'
 import { RequestError } from '@/api/core/errors'
-import { userLoginRequest, userUpdatePasswordRequest } from '@/api/modules/user'
+import { userForgotPasswordRequest, userLoginRequest, userUpdatePasswordRequest } from '@/api/modules/user'
 import { toAdminRole } from '@/api/shared/transforms'
 
 export function loginRequest(payload: LoginRequest): Promise<LoginResponse> {
@@ -17,9 +17,16 @@ export function loginRequest(payload: LoginRequest): Promise<LoginResponse> {
       employeeNo: payload.employeeNo.trim(),
       needUpdatePassword: result.need_update,
       role,
-      token: result.token,
+      token: result.token ?? '',
       userId: result.id,
     }
+  })
+}
+
+export function forgotPasswordRequest(payload: ForgotPasswordRequest): Promise<ForgotPasswordResponse> {
+  return userForgotPasswordRequest({
+    id_card: payload.idCard.trim().toUpperCase(),
+    username: payload.employeeNo.trim(),
   })
 }
 

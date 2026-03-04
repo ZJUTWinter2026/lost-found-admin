@@ -1,14 +1,21 @@
 import type {
   AdminArchivePostRequest,
+  AdminExpiredCleanResponse,
+  AdminExpiredListRequest,
+  AdminExpiredListResponse,
+  AdminExportResponse,
   AdminOperationResponse,
   AdminPendingListRequest,
   AdminPendingListResponse,
   AdminPostDetail,
+  AdminPostListRequest,
+  AdminPostListResponse,
   AdminPostOperationRequest,
   AdminRejectPostRequest,
   AdminStatisticsResponse,
 } from './types'
 import { request } from '@/api/core/request'
+import { toCampusParam, toPublishTypeParam } from '@/api/shared/transforms'
 
 export function getAdminPendingPostList(params: AdminPendingListRequest = {}) {
   const page = params.page ?? params.Page
@@ -31,6 +38,24 @@ export function getAdminPostDetail(postId: number) {
     method: 'GET',
     params: { post_id: postId },
     url: '/admin/detail',
+  })
+}
+
+export function getAdminPostList(params: AdminPostListRequest) {
+  return request<AdminPostListResponse>({
+    method: 'GET',
+    params: {
+      campus: toCampusParam(params.campus),
+      end_time: params.end_time,
+      item_type: params.item_type,
+      location: params.location,
+      page: params.page,
+      page_size: params.page_size,
+      publish_type: toPublishTypeParam(params.publish_type),
+      start_time: params.start_time,
+      status: params.status,
+    },
+    url: '/admin/post-list',
   })
 }
 
@@ -78,5 +103,31 @@ export function getAdminStatistics() {
   return request<AdminStatisticsResponse>({
     method: 'GET',
     url: '/admin/statistics',
+  })
+}
+
+export function getAdminExpiredList(params: AdminExpiredListRequest = {}) {
+  return request<AdminExpiredListResponse>({
+    method: 'GET',
+    params: {
+      page: params.page ?? 1,
+      page_size: params.page_size ?? 20,
+    },
+    url: '/admin/expired-list',
+  })
+}
+
+export function cleanAdminExpiredData() {
+  return request<AdminExpiredCleanResponse>({
+    data: {},
+    method: 'DELETE',
+    url: '/admin/expired-clean',
+  })
+}
+
+export function exportAdminSystemData() {
+  return request<AdminExportResponse>({
+    method: 'GET',
+    url: '/admin/export',
   })
 }

@@ -8,7 +8,7 @@ export interface UserLoginResponse {
   id: number
   name: string
   need_update: boolean
-  token: string
+  token?: string
   user_type: string
 }
 
@@ -19,4 +19,13 @@ export interface UserUpdatePasswordRequest {
 
 export interface UserUpdatePasswordResponse {
   token: string
+}
+
+export interface UserForgotPasswordRequest {
+  id_card: string
+  username: string
+}
+
+export interface UserForgotPasswordResponse {
+  success: boolean
 }

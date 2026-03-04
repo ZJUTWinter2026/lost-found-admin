@@ -13,6 +13,15 @@ export interface LoginResponse {
   userId: number
 }
 
+export interface ForgotPasswordRequest {
+  employeeNo: string
+  idCard: string
+}
+
+export interface ForgotPasswordResponse {
+  success: boolean
+}
+
 export interface ResetPasswordRequest {
   confirmPassword: string
   newPassword: string

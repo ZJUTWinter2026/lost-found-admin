@@ -6,13 +6,11 @@ import { useEffect, useState } from 'react'
 import { resolveErrorMessage } from '@/api/core/errors'
 import { BrandLogo } from '@/components/brand-logo'
 import { getDefaultRouteByRole } from '@/constants/admin-access'
-import { useLoginMutation, useResetPasswordMutation } from '@/query/auth'
+import { useForgotPasswordMutation, useLoginMutation } from '@/query/auth'
 import { useAuthStore } from '@/stores/use-auth-store'
 
 const { Text } = Typography
-
-const PASSWORD_RULE_TEXT = '密码由 6 - 16 位字母（区分大小写）、数字或符号组成'
-const PASSWORD_PATTERN = /^\S{6,16}$/
+const ID_CARD_PATTERN = /^\d{17}[\dX]$/i
 
 interface LoginFormValues {
   employeeNo: string
@@ -20,9 +18,8 @@ interface LoginFormValues {
 }
 
 interface ForgotPasswordFormValues {
-  confirmPassword: string
-  newPassword: string
-  oldPassword: string
+  employeeNo: string
+  idCard: string
 }
 
 export default function LoginPage() {
@@ -34,7 +31,7 @@ export default function LoginPage() {
   const [forgotPasswordForm] = Form.useForm<ForgotPasswordFormValues>()
   const [isForgotOpen, setIsForgotOpen] = useState(false)
   const loginMutation = useLoginMutation()
-  const resetPasswordMutation = useResetPasswordMutation()
+  const forgotPasswordMutation = useForgotPasswordMutation()
 
   useEffect(() => {
     if (isLoggedIn && role) {
@@ -67,7 +64,7 @@ export default function LoginPage() {
       })
       message.success('登录成功')
       if (result.needUpdatePassword) {
-        message.info('该账号需要先修改密码，建议尽快在登录页完成密码更新。')
+        message.info('该账号需要先修改密码，建议尽快完成密码更新。')
       }
       router.push(getDefaultRouteByRole(result.role))
     }
@@ -78,13 +75,21 @@ export default function LoginPage() {
 
   const handleForgotConfirm = async (values: ForgotPasswordFormValues) => {
     try {
-      await resetPasswordMutation.mutateAsync(values)
-      message.success('密码修改成功')
+      const result = await forgotPasswordMutation.mutateAsync({
+        employeeNo: values.employeeNo.trim(),
+        idCard: values.idCard.trim().toUpperCase(),
+      })
+      if (result.success) {
+        message.success('密码已重置为身份证后六位，请使用新密码登录')
+      }
+      else {
+        message.warning('密码重置未成功，请稍后再试')
+      }
       setIsForgotOpen(false)
       forgotPasswordForm.resetFields()
     }
     catch (error) {
-      message.error(resolveErrorMessage(error, '密码修改失败，请稍后再试'))
+      message.error(resolveErrorMessage(error, '忘记密码处理失败，请稍后再试'))
     }
   }
 
@@ -150,24 +155,24 @@ export default function LoginPage() {
             onClick={openForgotModal}
             className="cursor-pointer bg-transparent text-sm text-slate-500 transition hover:text-slate-900"
           >
-            修改密码
+            忘记密码
           </button>
         </div>
       </Card>
 
       <Modal
-        title="修改密码"
+        title="忘记密码"
         open={isForgotOpen}
         onCancel={closeForgotModal}
         onOk={() => forgotPasswordForm.submit()}
         okText="确认"
         cancelText="取消"
-        confirmLoading={resetPasswordMutation.isPending}
+        confirmLoading={forgotPasswordMutation.isPending}
         destroyOnHidden
       >
         <Space direction="vertical" size={2} className="mb-4 w-full">
-          <Text type="secondary">为统一验证系统密码</Text>
-          <Text type="secondary">{PASSWORD_RULE_TEXT}</Text>
+          <Text type="secondary">请输入工号/学号与身份证号进行验证</Text>
+          <Text type="secondary">验证成功后，密码将重置为身份证后六位</Text>
         </Space>
 
         <Form
@@ -179,42 +184,23 @@ export default function LoginPage() {
         >
           <Form.Item
             className="!mb-3"
-            label="原密码"
-            name="oldPassword"
-            rules={[{ required: true, message: '请输入原密码' }]}
+            label="工号/学号"
+            name="employeeNo"
+            rules={[{ required: true, message: '请输入工号/学号' }]}
           >
-            <Input.Password placeholder="请输入原密码" />
+            <Input placeholder="请输入工号/学号" />
           </Form.Item>
 
           <Form.Item
             className="!mb-3"
-            label="新密码"
-            name="newPassword"
+            label="身份证号"
+            name="idCard"
             rules={[
-              { required: true, message: '请输入新密码' },
-              { pattern: PASSWORD_PATTERN, message: PASSWORD_RULE_TEXT },
+              { required: true, message: '请输入身份证号' },
+              { pattern: ID_CARD_PATTERN, message: '请输入合法身份证号' },
             ]}
           >
-            <Input.Password placeholder="请输入新密码" />
-          </Form.Item>
-
-          <Form.Item
-            className="!mb-3"
-            label="确认密码"
-            name="confirmPassword"
-            dependencies={['newPassword']}
-            rules={[
-              { required: true, message: '请再次输入新密码' },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value || getFieldValue('newPassword') === value)
-                    return Promise.resolve()
-                  return Promise.reject(new Error('两次输入的密码不一致'))
-                },
-              }),
-            ]}
-          >
-            <Input.Password placeholder="请再次输入新密码" />
+            <Input placeholder="请输入 18 位身份证号" maxLength={18} />
           </Form.Item>
         </Form>
       </Modal>

@@ -1,1 +1,1 @@
-export { useLoginMutation, useResetPasswordMutation } from './mutations'
+export { useForgotPasswordMutation, useLoginMutation, useResetPasswordMutation } from './mutations'

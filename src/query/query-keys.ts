@@ -3,8 +3,10 @@ export const queryKeys = {
     list: (params?: { username?: string }) => ['account', 'list', params?.username ?? null] as const,
   },
   admin: {
+    expiredList: (params?: { page?: number, page_size?: number }) => ['admin', 'expired-list', params?.page ?? 1, params?.page_size ?? 20] as const,
     pendingDetail: (postId?: number | null) => ['admin', 'pending-detail', postId ?? null] as const,
     pendingList: () => ['admin', 'pending-list'] as const,
+    postList: (params?: object) => ['admin', 'post-list', params ?? {}] as const,
     statistics: () => ['admin', 'statistics'] as const,
   },
   announcement: {

@@ -7,10 +7,10 @@ import { useMemo, useState } from 'react'
 import { normalizePostStatus, toPublishKind } from '@/api/shared/transforms'
 import {
   useAdminPendingDetailQuery,
+  useAdminPostListQuery,
   useArchiveAdminPostMutation,
   useClaimAdminPostMutation,
 } from '@/query/admin'
-import { usePostListQuery } from '@/query/post'
 import { queryKeys } from '@/query/query-keys'
 import { formatDateTime, getBeijingTimestamp } from '@/utils/admin-mock'
 
@@ -44,7 +44,7 @@ function resolveFlowStatus(status: string): ItemFlowStatus {
   if (normalized.includes('archive'))
     return 'archived'
 
-  if (normalized.includes('claim') || normalized.includes('match'))
+  if (normalized.includes('claim') || normalized.includes('match') || normalized.includes('solve'))
     return 'matched'
 
   return 'unmatched'
@@ -59,11 +59,17 @@ export default function ItemStatusPage() {
   const [archiveMethodInput, setArchiveMethodInput] = useState('')
   const [showArchiveEditor, setShowArchiveEditor] = useState(false)
 
-  const postListQuery = usePostListQuery({
+  const activePostListParams = useMemo(() => ({
     page: 1,
     page_size: 20,
     publish_type: activeTab,
-  })
+  }), [activeTab])
+  const allPostListParams = useMemo(() => ({
+    page: 1,
+    page_size: 20,
+  }), [])
+
+  const postListQuery = useAdminPostListQuery(activePostListParams)
 
   const postDetailQuery = useAdminPendingDetailQuery(currentPostId)
   const claimMutation = useClaimAdminPostMutation()
@@ -74,10 +80,7 @@ export default function ItemStatusPage() {
     [postListQuery.data?.list],
   )
 
-  const allRowsForCount = usePostListQuery({
-    page: 1,
-    page_size: 20,
-  })
+  const allRowsForCount = useAdminPostListQuery(allPostListParams)
 
   const lostCount = useMemo(
     () => (allRowsForCount.data?.list ?? []).filter(item => toPublishKind(item.publish_type) === 'lost').length,
@@ -119,8 +122,8 @@ export default function ItemStatusPage() {
     message.success('已标记为已认领')
 
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: queryKeys.post.list({}) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.post.list({ page: 1, page_size: 20, publish_type: activeTab }) }),
+      queryClient.invalidateQueries({ queryKey: ['admin', 'post-list'] }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.postList(activePostListParams) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.admin.pendingDetail(currentDetail.id) }),
     ])
   }
@@ -146,8 +149,8 @@ export default function ItemStatusPage() {
     setArchiveMethodInput('')
 
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: queryKeys.post.list({}) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.post.list({ page: 1, page_size: 20, publish_type: activeTab }) }),
+      queryClient.invalidateQueries({ queryKey: ['admin', 'post-list'] }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.postList(activePostListParams) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.admin.pendingDetail(currentDetail.id) }),
     ])
   }
