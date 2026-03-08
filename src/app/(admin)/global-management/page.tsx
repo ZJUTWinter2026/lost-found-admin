@@ -14,6 +14,7 @@ import { useSystemConfigQuery, useUpdateClaimValidityDaysMutation, useUpdateFeed
 import { formatDateTime } from '@/utils/admin-mock'
 
 type GlobalTab = 'overview' | 'params' | 'data'
+const PROTECTED_TYPE_NAMES = new Set(['其他类型'])
 
 const EXPIRED_STATUS_LABEL_MAP: Record<string, string> = {
   APPROVED: '已通过',
@@ -58,6 +59,10 @@ function resolveExportUrl(url: string) {
   return new URL(url, window.location.origin).toString()
 }
 
+function isProtectedTypeName(value: string) {
+  return PROTECTED_TYPE_NAMES.has(value.trim())
+}
+
 export default function GlobalManagementPage() {
   const { message } = App.useApp()
   const queryClient = useQueryClient()
@@ -83,6 +88,7 @@ export default function GlobalManagementPage() {
   const updatePublishLimitMutation = useUpdatePublishLimitMutation()
   const cleanExpiredMutation = useCleanAdminExpiredDataMutation()
   const exportDataMutation = useExportAdminSystemDataMutation()
+  const config = configQuery.data
 
   const statusRows = useMemo(
     () => Object.entries(statisticsQuery.data?.status_counts ?? {}).map(([key, value]) => ({ key, status: key, total: value })),
@@ -157,6 +163,72 @@ export default function GlobalManagementPage() {
     await queryClient.invalidateQueries({ queryKey: queryKeys.system.config() })
   }
 
+  const handleUpdateFeedbackTypes = async (nextTypes: string[], successMessage: string) => {
+    try {
+      await updateFeedbackTypesMutation.mutateAsync({ feedback_types: nextTypes })
+      await refreshConfig()
+      message.success(successMessage)
+    }
+    catch (error) {
+      message.error(resolveErrorMessage(error, '更新投诉反馈类型失败，请稍后再试'))
+    }
+  }
+
+  const handleUpdateItemTypes = async (nextTypes: string[], successMessage: string) => {
+    try {
+      await updateItemTypesMutation.mutateAsync({ item_types: nextTypes })
+      await refreshConfig()
+      message.success(successMessage)
+    }
+    catch (error) {
+      message.error(resolveErrorMessage(error, '更新物品类型失败，请稍后再试'))
+    }
+  }
+
+  const handleAddFeedbackType = async () => {
+    const value = newFeedbackType.trim()
+    if (!config || !value)
+      return
+
+    const next = Array.from(new Set([...config.feedback_types, value]))
+    await handleUpdateFeedbackTypes(next, '投诉反馈类型已更新')
+    setNewFeedbackType('')
+  }
+
+  const handleRemoveFeedbackType = async (target: string) => {
+    if (!config)
+      return
+    if (isProtectedTypeName(target)) {
+      message.warning('“其他类型”为系统保留项，不允许删除')
+      return
+    }
+
+    const next = config.feedback_types.filter(type => type !== target)
+    await handleUpdateFeedbackTypes(next, `已删除“${target}”`)
+  }
+
+  const handleAddItemType = async () => {
+    const value = newItemType.trim()
+    if (!config || !value)
+      return
+
+    const next = Array.from(new Set([...config.item_types, value]))
+    await handleUpdateItemTypes(next, '物品类型已更新')
+    setNewItemType('')
+  }
+
+  const handleRemoveItemType = async (target: string) => {
+    if (!config)
+      return
+    if (isProtectedTypeName(target)) {
+      message.warning('“其他类型”为系统保留项，不允许删除')
+      return
+    }
+
+    const next = config.item_types.filter(type => type !== target)
+    await handleUpdateItemTypes(next, `已删除“${target}”`)
+  }
+
   const refreshExpiredList = async () => {
     await queryClient.invalidateQueries({ queryKey: ['admin', 'expired-list'] })
   }
@@ -189,8 +261,6 @@ export default function GlobalManagementPage() {
       message.error(resolveErrorMessage(error, '清理失败，请稍后再试'))
     }
   }
-
-  const config = configQuery.data
 
   return (
     <Space direction="vertical" size={16} className="w-full">
@@ -255,7 +325,17 @@ export default function GlobalManagementPage() {
             <Space direction="vertical" size={12} className="w-full">
               <Flex wrap gap={8}>
                 {(config?.feedback_types ?? []).map(type => (
-                  <Tag key={type} color="blue">{type}</Tag>
+                  <Tag
+                    key={type}
+                    color="blue"
+                    closable={!updateFeedbackTypesMutation.isPending && !isProtectedTypeName(type)}
+                    onClose={(event) => {
+                      event.preventDefault()
+                      void handleRemoveFeedbackType(type)
+                    }}
+                  >
+                    {type}
+                  </Tag>
                 ))}
               </Flex>
 
@@ -269,16 +349,10 @@ export default function GlobalManagementPage() {
                 />
                 <Button
                   icon={<PlusOutlined />}
+                  loading={updateFeedbackTypesMutation.isPending}
                   disabled={!newFeedbackType.trim() || !config}
-                  onClick={async () => {
-                    if (!config)
-                      return
-
-                    const next = Array.from(new Set([...config.feedback_types, newFeedbackType.trim()]))
-                    await updateFeedbackTypesMutation.mutateAsync({ feedback_types: next })
-                    await refreshConfig()
-                    message.success('投诉反馈类型已更新')
-                    setNewFeedbackType('')
+                  onClick={() => {
+                    void handleAddFeedbackType()
                   }}
                 >
                   添加
@@ -291,7 +365,17 @@ export default function GlobalManagementPage() {
             <Space direction="vertical" size={12} className="w-full">
               <Flex wrap gap={8}>
                 {(config?.item_types ?? []).map(type => (
-                  <Tag key={type} color="blue">{type}</Tag>
+                  <Tag
+                    key={type}
+                    color="blue"
+                    closable={!updateItemTypesMutation.isPending && !isProtectedTypeName(type)}
+                    onClose={(event) => {
+                      event.preventDefault()
+                      void handleRemoveItemType(type)
+                    }}
+                  >
+                    {type}
+                  </Tag>
                 ))}
               </Flex>
 
@@ -305,16 +389,10 @@ export default function GlobalManagementPage() {
                 />
                 <Button
                   icon={<PlusOutlined />}
+                  loading={updateItemTypesMutation.isPending}
                   disabled={!newItemType.trim() || !config}
-                  onClick={async () => {
-                    if (!config)
-                      return
-
-                    const next = Array.from(new Set([...config.item_types, newItemType.trim()]))
-                    await updateItemTypesMutation.mutateAsync({ item_types: next })
-                    await refreshConfig()
-                    message.success('物品类型已更新')
-                    setNewItemType('')
+                  onClick={() => {
+                    void handleAddItemType()
                   }}
                 >
                   添加
