@@ -2,8 +2,9 @@
 
 import { ExclamationCircleOutlined } from '@ant-design/icons'
 import { useQueryClient } from '@tanstack/react-query'
-import { App, Button, Card, Descriptions, Empty, Flex, Image, Input, Modal, Radio, Segmented, Space, Tag, Typography } from 'antd'
+import { App, Button, Card, Descriptions, Empty, Flex, Image, Input, Modal, Radio, Segmented, Select, Space, Tag, Typography } from 'antd'
 import { useMemo, useState } from 'react'
+import { resolveErrorMessage } from '@/api/core/errors'
 import { toCampusName, toDisableDurationParam, toPublishKind } from '@/api/shared/transforms'
 import { useDisableAccountMutation } from '@/query/account'
 import {
@@ -20,12 +21,18 @@ import { formatDate, formatDateTime, getBeijingTimestamp } from '@/utils/admin-m
 
 const { TextArea } = Input
 
-type MainTab = 'global' | 'regional' | 'review' | 'feedback'
+type MainTab = 'global' | 'regional-review' | 'regional-send' | 'review' | 'feedback'
 type DisableDuration = '7d' | '1m' | '6m' | '1y'
+type CampusCode = 'ZHAO_HUI' | 'PING_FENG' | 'MO_GAN_SHAN'
 const KIND_LABEL = {
   lost: '失物',
   found: '招领',
 } as const
+const CAMPUS_OPTIONS: { label: string, value: CampusCode }[] = [
+  { label: '朝晖', value: 'ZHAO_HUI' },
+  { label: '屏峰', value: 'PING_FENG' },
+  { label: '莫干山', value: 'MO_GAN_SHAN' },
+]
 
 export default function AnnouncementContentPage() {
   const { message, modal } = App.useApp()
@@ -35,6 +42,9 @@ export default function AnnouncementContentPage() {
 
   const [globalTitle, setGlobalTitle] = useState('系统公告')
   const [globalContent, setGlobalContent] = useState('')
+  const [regionalCampus, setRegionalCampus] = useState<CampusCode>()
+  const [regionalTitle, setRegionalTitle] = useState('')
+  const [regionalContent, setRegionalContent] = useState('')
 
   const [selectedAnnouncementId, setSelectedAnnouncementId] = useState<number | null>(null)
 
@@ -54,7 +64,8 @@ export default function AnnouncementContentPage() {
   const processFeedbackMutation = useProcessFeedbackMutation()
   const disableAccountMutation = useDisableAccountMutation()
 
-  const postListQuery = useAdminPendingListQuery()
+  const pendingLostQuery = useAdminPendingListQuery('lost', { page: 1, page_size: 20 })
+  const pendingFoundQuery = useAdminPendingListQuery('found', { page: 1, page_size: 20 })
   const postDetailQuery = useAdminPendingDetailQuery(selectedPostId)
   const approvePostMutation = useApproveAdminPostMutation()
   const rejectPostMutation = useRejectAdminPostMutation()
@@ -72,10 +83,13 @@ export default function AnnouncementContentPage() {
   )
 
   const visibleReviewPosts = useMemo(
-    () => (postListQuery.data?.list ?? [])
-      .sort((a, b) => getBeijingTimestamp(b.event_time) - getBeijingTimestamp(a.event_time)),
-    [postListQuery.data?.list],
+    () => [
+      ...(pendingLostQuery.data?.list ?? []).map(item => ({ ...item, publish_type: item.publish_type ?? 'LOST' })),
+      ...(pendingFoundQuery.data?.list ?? []).map(item => ({ ...item, publish_type: item.publish_type ?? 'FOUND' })),
+    ].sort((a, b) => getBeijingTimestamp(b.event_time) - getBeijingTimestamp(a.event_time)),
+    [pendingFoundQuery.data?.list, pendingLostQuery.data?.list],
   )
+  const pendingListLoading = pendingLostQuery.isLoading || pendingFoundQuery.isLoading
 
   const sortedFeedbacks = useMemo(
     () => [...(feedbackListQuery.data?.list ?? [])]
@@ -94,6 +108,79 @@ export default function AnnouncementContentPage() {
     message.success('区域公告审核通过')
 
     await queryClient.invalidateQueries({ queryKey: queryKeys.announcement.reviewList() })
+  }
+
+  const handlePublishGlobalAnnouncement = async () => {
+    const title = globalTitle.trim()
+    const content = globalContent.trim()
+
+    if (!title) {
+      message.warning('请输入公告标题')
+      return
+    }
+
+    if (!content) {
+      message.warning('请输入公告内容')
+      return
+    }
+
+    try {
+      await publishMutation.mutateAsync({
+        content,
+        title,
+        type: 'SYSTEM',
+      })
+
+      setGlobalContent('')
+      message.success('全局公告已发送')
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.announcement.approvedList() }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.announcement.reviewList() }),
+      ])
+    }
+    catch (error) {
+      message.error(resolveErrorMessage(error, '发送全局公告失败，请稍后再试'))
+    }
+  }
+
+  const handlePublishRegionalAnnouncement = async () => {
+    const title = regionalTitle.trim()
+    const content = regionalContent.trim()
+
+    if (!regionalCampus) {
+      message.warning('请选择通知校区')
+      return
+    }
+
+    if (!title) {
+      message.warning('请输入公告标题')
+      return
+    }
+
+    if (!content) {
+      message.warning('请输入公告内容')
+      return
+    }
+
+    try {
+      await publishMutation.mutateAsync({
+        campus: regionalCampus,
+        content,
+        title,
+        type: 'REGION',
+      })
+
+      setRegionalCampus(undefined)
+      setRegionalTitle('')
+      setRegionalContent('')
+      message.success('区域公告已发送')
+
+      await queryClient.invalidateQueries({ queryKey: queryKeys.announcement.reviewList() })
+    }
+    catch (error) {
+      message.error(resolveErrorMessage(error, '发送区域公告失败，请稍后再试'))
+    }
   }
 
   const handleDeletePost = async () => {
@@ -203,8 +290,9 @@ export default function AnnouncementContentPage() {
           value={activeTab}
           options={[
             { label: '审核发布信息', value: 'review' },
-            { label: '发布全局公告', value: 'global' },
-            { label: '审核区域公告', value: 'regional' },
+            { label: '发送全体系统通知', value: 'global' },
+            { label: '发送系统通知', value: 'regional-send' },
+            { label: '审核区域公告', value: 'regional-review' },
             { label: '投诉与反馈', value: 'feedback' },
           ]}
           onChange={value => setActiveTab(value as MainTab)}
@@ -212,7 +300,7 @@ export default function AnnouncementContentPage() {
       </Card>
 
       {activeTab === 'global' && (
-        <Card title="发布全局公告">
+        <Card title="发送全体系统通知（全局公告）">
           <Space direction="vertical" size={12} className="w-full">
             <Input
               value={globalTitle}
@@ -234,24 +322,62 @@ export default function AnnouncementContentPage() {
               className="w-fit"
               loading={publishMutation.isPending}
               disabled={!globalTitle.trim() || !globalContent.trim()}
-              onClick={async () => {
-                await publishMutation.mutateAsync({
-                  content: globalContent.trim(),
-                  title: globalTitle.trim(),
-                  type: 'SYSTEM',
-                })
-
-                setGlobalContent('')
-                message.success('全局公告已发布')
+              onClick={() => {
+                void handlePublishGlobalAnnouncement()
               }}
             >
-              确认
+              发送全体系统通知
             </Button>
           </Space>
         </Card>
       )}
 
-      {activeTab === 'regional' && (
+      {activeTab === 'regional-send' && (
+        <Card title="发送系统通知（区域公告）">
+          <Space direction="vertical" size={12} className="w-full">
+            <Select
+              value={regionalCampus}
+              placeholder="请选择通知校区"
+              options={CAMPUS_OPTIONS}
+              onChange={value => setRegionalCampus(value)}
+            />
+
+            <Input
+              value={regionalTitle}
+              maxLength={100}
+              placeholder="请输入公告标题（限100字）"
+              onChange={event => setRegionalTitle(event.target.value)}
+            />
+
+            <TextArea
+              rows={6}
+              maxLength={5000}
+              value={regionalContent}
+              placeholder="请输入公告内容（限5000字）"
+              onChange={event => setRegionalContent(event.target.value)}
+            />
+
+            <div className="pb-1 text-right text-xs text-slate-400">
+              {regionalContent.length}
+              {' / 5000'}
+            </div>
+
+            <Button
+              type="primary"
+              className="w-fit"
+              loading={publishMutation.isPending}
+              disabled={!regionalCampus || !regionalTitle.trim() || !regionalContent.trim()}
+              onClick={() => {
+                void handlePublishRegionalAnnouncement()
+              }}
+            >
+              发送系统通知
+            </Button>
+          </Space>
+        </Card>
+      )}
+
+      {activeTab === 'regional-review' && (
         <Flex vertical gap={16}>
           <Card title="区域公告列表" loading={reviewListQuery.isLoading}>
             <Space direction="vertical" size={10} className="w-full">
@@ -301,7 +427,7 @@ export default function AnnouncementContentPage() {
       {activeTab === 'review' && (
         <Space direction="vertical" size={16} className="w-full">
           {!selectedPostId && (
-            <Card title="发布信息列表" loading={postListQuery.isLoading}>
+            <Card title="发布信息列表" loading={pendingListLoading}>
               <Space direction="vertical" size={10} className="w-full">
                 {visibleReviewPosts.length === 0 && <Empty description="暂无可审核发布信息" />}
                 {visibleReviewPosts.map(post => (

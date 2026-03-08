@@ -3,8 +3,11 @@ import type { CampusName, PublishKind } from '@/api/shared/transforms'
 export interface AdminPendingListRequest {
   Page?: number
   PageSize?: number
+  Type?: string
   page?: number
   page_size?: number
+  publish_type?: PublishKind
+  type?: string
 }
 
 export interface AdminPendingPostItem {
@@ -15,11 +18,35 @@ export interface AdminPendingPostItem {
   item_name: string
   item_type: string
   location: string
-  publish_type: string
+  publish_type?: string
 }
 
 export interface AdminPendingListResponse {
   list: AdminPendingPostItem[]
+  page: number
+  page_size: number
+  total: number
+}
+
+export interface AdminReviewRecordsRequest {
+  page?: number
+  page_size?: number
+}
+
+export interface AdminReviewRecordItem {
+  campus: string
+  id: number
+  item_name: string
+  item_type: string
+  location: string
+  processed_at?: unknown
+  publish_type: string
+  reject_reason?: string
+  status: string
+}
+
+export interface AdminReviewRecordsResponse {
+  list: AdminReviewRecordItem[]
   page: number
   page_size: number
   total: number
@@ -61,6 +88,12 @@ export interface AdminPostListResponse {
   page: number
   page_size: number
   total: number
+}
+
+export interface AdminPublishedListRequest {
+  page?: number
+  page_size?: number
+  publish_type: PublishKind
 }
 
 export interface AdminPostDetail {

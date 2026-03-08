@@ -14,7 +14,7 @@ import { useSystemConfigQuery, useUpdateClaimValidityDaysMutation, useUpdateFeed
 import { formatDateTime } from '@/utils/admin-mock'
 
 type GlobalTab = 'overview' | 'params' | 'data'
-const PROTECTED_TYPE_NAMES = new Set(['其他类型'])
+const PROTECTED_TYPE_NAMES = new Set(['其他类型', '其它类型'])
 
 const EXPIRED_STATUS_LABEL_MAP: Record<string, string> = {
   APPROVED: '已通过',
@@ -199,7 +199,7 @@ export default function GlobalManagementPage() {
     if (!config)
       return
     if (isProtectedTypeName(target)) {
-      message.warning('“其他类型”为系统保留项，不允许删除')
+      message.warning('“其他类型/其它类型”为系统保留项，不允许删除')
       return
     }
 
@@ -221,7 +221,7 @@ export default function GlobalManagementPage() {
     if (!config)
       return
     if (isProtectedTypeName(target)) {
-      message.warning('“其他类型”为系统保留项，不允许删除')
+      message.warning('“其他类型/其它类型”为系统保留项，不允许删除')
       return
     }
 

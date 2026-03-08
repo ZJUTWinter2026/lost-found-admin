@@ -12,5 +12,7 @@ export {
   useAdminPendingDetailQuery,
   useAdminPendingListQuery,
   useAdminPostListQuery,
+  useAdminPublishedListQuery,
+  useAdminReviewRecordsQuery,
   useAdminStatisticsQuery,
 } from './queries'

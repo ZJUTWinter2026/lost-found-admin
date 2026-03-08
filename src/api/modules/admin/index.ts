@@ -9,6 +9,8 @@ export {
   getAdminPendingPostList,
   getAdminPostDetail,
   getAdminPostList,
+  getAdminPublishedPostList,
+  getAdminReviewRecords,
   getAdminStatistics,
   rejectAdminPost,
 } from './requests'
@@ -28,7 +30,11 @@ export type {
   AdminPostListRequest,
   AdminPostListResponse,
   AdminPostOperationRequest,
+  AdminPublishedListRequest,
   AdminRejectPostRequest,
+  AdminReviewRecordItem,
+  AdminReviewRecordsRequest,
+  AdminReviewRecordsResponse,
   AdminStatisticsResponse,
   ManagedPostStatus,
 } from './types'

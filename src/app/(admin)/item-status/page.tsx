@@ -2,16 +2,17 @@
 
 import type { SegmentedProps } from 'antd'
 import { useQueryClient } from '@tanstack/react-query'
-import { App, Button, Card, Descriptions, Empty, Flex, Image, Input, Modal, Segmented, Space, Tag, Typography } from 'antd'
+import { Alert, App, Button, Card, Descriptions, Empty, Flex, Image, Input, Modal, Segmented, Space, Tag, Typography } from 'antd'
 import { useMemo, useState } from 'react'
 import { normalizePostStatus, toPublishKind } from '@/api/shared/transforms'
 import {
   useAdminPendingDetailQuery,
-  useAdminPostListQuery,
+  useAdminPublishedListQuery,
   useArchiveAdminPostMutation,
   useClaimAdminPostMutation,
 } from '@/query/admin'
 import { queryKeys } from '@/query/query-keys'
+import { useSystemConfigQuery } from '@/query/system'
 import { formatDateTime, getBeijingTimestamp } from '@/utils/admin-mock'
 
 const { TextArea } = Input
@@ -59,17 +60,21 @@ export default function ItemStatusPage() {
   const [archiveMethodInput, setArchiveMethodInput] = useState('')
   const [showArchiveEditor, setShowArchiveEditor] = useState(false)
 
-  const activePostListParams = useMemo(() => ({
+  const lostPostListParams = useMemo(() => ({
     page: 1,
     page_size: 20,
-    publish_type: activeTab,
-  }), [activeTab])
-  const allPostListParams = useMemo(() => ({
+    publish_type: 'lost' as const,
+  }), [])
+  const foundPostListParams = useMemo(() => ({
     page: 1,
     page_size: 20,
+    publish_type: 'found' as const,
   }), [])
 
-  const postListQuery = useAdminPostListQuery(activePostListParams)
+  const lostPostListQuery = useAdminPublishedListQuery(lostPostListParams)
+  const foundPostListQuery = useAdminPublishedListQuery(foundPostListParams)
+  const postListQuery = activeTab === 'lost' ? lostPostListQuery : foundPostListQuery
+  const configQuery = useSystemConfigQuery()
 
   const postDetailQuery = useAdminPendingDetailQuery(currentPostId)
   const claimMutation = useClaimAdminPostMutation()
@@ -80,17 +85,8 @@ export default function ItemStatusPage() {
     [postListQuery.data?.list],
   )
 
-  const allRowsForCount = useAdminPostListQuery(allPostListParams)
-
-  const lostCount = useMemo(
-    () => (allRowsForCount.data?.list ?? []).filter(item => toPublishKind(item.publish_type) === 'lost').length,
-    [allRowsForCount.data?.list],
-  )
-
-  const foundCount = useMemo(
-    () => (allRowsForCount.data?.list ?? []).filter(item => toPublishKind(item.publish_type) === 'found').length,
-    [allRowsForCount.data?.list],
-  )
+  const lostCount = lostPostListQuery.data?.total ?? lostPostListQuery.data?.list.length ?? 0
+  const foundCount = foundPostListQuery.data?.total ?? foundPostListQuery.data?.list.length ?? 0
 
   const tabOptions = useMemo<SegmentedProps['options']>(
     () => [
@@ -102,6 +98,10 @@ export default function ItemStatusPage() {
 
   const currentDetail = postDetailQuery.data
   const currentFlowStatus = currentDetail ? resolveFlowStatus(currentDetail.status) : null
+  const claimValidityDays = configQuery.data?.claim_validity_days
+  const archiveHintText = claimValidityDays == null
+    ? '超过认领时效后才可归档'
+    : `超过认领时效${claimValidityDays}天才可归档`
 
   const isSubmitting = claimMutation.isPending || archiveMutation.isPending
 
@@ -123,7 +123,7 @@ export default function ItemStatusPage() {
 
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['admin', 'post-list'] }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.postList(activePostListParams) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.publishedList() }),
       queryClient.invalidateQueries({ queryKey: queryKeys.admin.pendingDetail(currentDetail.id) }),
     ])
   }
@@ -150,7 +150,7 @@ export default function ItemStatusPage() {
 
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['admin', 'post-list'] }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.postList(activePostListParams) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.publishedList() }),
       queryClient.invalidateQueries({ queryKey: queryKeys.admin.pendingDetail(currentDetail.id) }),
     ])
   }
@@ -289,6 +289,12 @@ export default function ItemStatusPage() {
 
                   {showArchiveEditor && (
                     <Space direction="vertical" size={8} className="w-full">
+                      <Alert
+                        type="warning"
+                        showIcon
+                        message={archiveHintText}
+                      />
+
                       <TextArea
                         value={archiveMethodInput}
                         maxLength={100}

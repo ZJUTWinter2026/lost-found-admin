@@ -6,7 +6,9 @@ export const queryKeys = {
     expiredList: (params?: { page?: number, page_size?: number }) => ['admin', 'expired-list', params?.page ?? 1, params?.page_size ?? 20] as const,
     pendingDetail: (postId?: number | null) => ['admin', 'pending-detail', postId ?? null] as const,
     pendingList: () => ['admin', 'pending-list'] as const,
+    publishedList: () => ['admin', 'published-list'] as const,
     postList: (params?: object) => ['admin', 'post-list', params ?? {}] as const,
+    reviewRecords: (params?: { page?: number, page_size?: number }) => ['admin', 'review-records', params?.page ?? 1, params?.page_size ?? 20] as const,
     statistics: () => ['admin', 'statistics'] as const,
   },
   announcement: {

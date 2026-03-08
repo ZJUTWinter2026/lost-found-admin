@@ -1,15 +1,15 @@
 'use client'
 
 import type { SegmentedProps } from 'antd'
-import type { AdminPostListItem, ManagedPostStatus } from '@/api/modules/admin'
+import type { AdminReviewRecordItem } from '@/api/modules/admin'
 import { useQueryClient } from '@tanstack/react-query'
 import { App, Button, Card, Descriptions, Empty, Flex, Image, Input, Modal, Segmented, Space, Tag, Typography } from 'antd'
 import { useMemo, useState } from 'react'
-import { toPublishKind } from '@/api/shared/transforms'
+import { normalizeDateTime, toCampusName, toPublishKind } from '@/api/shared/transforms'
 import {
   useAdminPendingDetailQuery,
   useAdminPendingListQuery,
-  useAdminPostListQuery,
+  useAdminReviewRecordsQuery,
   useApproveAdminPostMutation,
   useRejectAdminPostMutation,
 } from '@/query/admin'
@@ -24,12 +24,14 @@ type ReviewResult = 'approved' | 'rejected'
 
 interface ReviewHistoryItem {
   id: number
-  createdAt: string
+  campus: string
   itemName: string
   itemType: string
   kind: 'lost' | 'found'
+  location: string
+  processedAt: string | null
+  rejectReason?: string
   reviewResult: ReviewResult
-  status: ManagedPostStatus
 }
 
 const KIND_LABEL = {
@@ -56,19 +58,21 @@ function toReviewResult(status: string): ReviewResult | null {
   return null
 }
 
-function toHistoryItem(row: AdminPostListItem): ReviewHistoryItem | null {
+function toHistoryItem(row: AdminReviewRecordItem): ReviewHistoryItem | null {
   const reviewResult = toReviewResult(row.status)
   if (!reviewResult)
     return null
 
   return {
-    createdAt: row.created_at,
+    campus: toCampusName(row.campus) ?? row.campus,
     id: row.id,
     itemName: row.item_name,
     itemType: row.item_type,
     kind: toPublishKind(row.publish_type),
+    location: row.location,
+    processedAt: normalizeDateTime(row.processed_at),
+    rejectReason: row.reject_reason,
     reviewResult,
-    status: row.status as ManagedPostStatus,
   }
 }
 
@@ -81,50 +85,43 @@ export default function ReviewPublishPage() {
   const [rejectReason, setRejectReason] = useState('')
   const [showRejectEditor, setShowRejectEditor] = useState(false)
 
-  const pendingListQuery = useAdminPendingListQuery()
+  const pendingLostQuery = useAdminPendingListQuery('lost', { page: 1, page_size: 20 })
+  const pendingFoundQuery = useAdminPendingListQuery('found', { page: 1, page_size: 20 })
   const pendingDetailQuery = useAdminPendingDetailQuery(currentPostId)
-  const approvedHistoryQuery = useAdminPostListQuery({ page: 1, page_size: 50, status: 'APPROVED' })
-  const rejectedHistoryQuery = useAdminPostListQuery({ page: 1, page_size: 50, status: 'REJECTED' })
+  const reviewRecordsQuery = useAdminReviewRecordsQuery({ page: 1, page_size: 50 })
 
   const approveMutation = useApproveAdminPostMutation()
   const rejectMutation = useRejectAdminPostMutation()
 
-  const pendingItems = useMemo(
-    () => pendingListQuery.data?.list ?? [],
-    [pendingListQuery.data?.list],
-  )
-
   const pendingLostItems = useMemo(
-    () => pendingItems
-      .filter(item => toPublishKind(item.publish_type) === 'lost')
+    () => (pendingLostQuery.data?.list ?? [])
       .sort((a, b) => getBeijingTimestamp(b.created_at) - getBeijingTimestamp(a.created_at)),
-    [pendingItems],
+    [pendingLostQuery.data?.list],
   )
 
   const pendingFoundItems = useMemo(
-    () => pendingItems
-      .filter(item => toPublishKind(item.publish_type) === 'found')
+    () => (pendingFoundQuery.data?.list ?? [])
       .sort((a, b) => getBeijingTimestamp(b.created_at) - getBeijingTimestamp(a.created_at)),
-    [pendingItems],
+    [pendingFoundQuery.data?.list],
   )
 
   const sortedHistory = useMemo(
-    () => [...(approvedHistoryQuery.data?.list ?? []), ...(rejectedHistoryQuery.data?.list ?? [])]
+    () => (reviewRecordsQuery.data?.list ?? [])
       .map(toHistoryItem)
       .filter((item): item is ReviewHistoryItem => Boolean(item))
-      .sort((a, b) => getBeijingTimestamp(b.createdAt) - getBeijingTimestamp(a.createdAt)),
-    [approvedHistoryQuery.data?.list, rejectedHistoryQuery.data?.list],
+      .sort((a, b) => getBeijingTimestamp(b.processedAt) - getBeijingTimestamp(a.processedAt)),
+    [reviewRecordsQuery.data?.list],
   )
 
-  const historyTotal = (approvedHistoryQuery.data?.total ?? 0) + (rejectedHistoryQuery.data?.total ?? 0)
+  const historyTotal = reviewRecordsQuery.data?.total ?? 0
 
   const tabOptions = useMemo<SegmentedProps['options']>(
     () => [
-      { label: `失物（${pendingLostItems.length}）`, value: 'lost' },
-      { label: `招领（${pendingFoundItems.length}）`, value: 'found' },
+      { label: `失物（${pendingLostQuery.data?.total ?? pendingLostItems.length}）`, value: 'lost' },
+      { label: `招领（${pendingFoundQuery.data?.total ?? pendingFoundItems.length}）`, value: 'found' },
       { label: `历史审核记录（${historyTotal}）`, value: 'history' },
     ],
-    [historyTotal, pendingFoundItems.length, pendingLostItems.length],
+    [historyTotal, pendingFoundItems.length, pendingFoundQuery.data?.total, pendingLostItems.length, pendingLostQuery.data?.total],
   )
 
   const currentPendingDetail = pendingDetailQuery.data
@@ -158,8 +155,7 @@ export default function ReviewPublishPage() {
     message.success('审核通过成功')
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.admin.pendingList() }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.postList({ page: 1, page_size: 50, status: 'APPROVED' }) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.postList({ page: 1, page_size: 50, status: 'REJECTED' }) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.reviewRecords({ page: 1, page_size: 50 }) }),
     ])
     closePendingModal()
   }
@@ -183,13 +179,14 @@ export default function ReviewPublishPage() {
 
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.admin.pendingList() }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.postList({ page: 1, page_size: 50, status: 'APPROVED' }) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.postList({ page: 1, page_size: 50, status: 'REJECTED' }) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.reviewRecords({ page: 1, page_size: 50 }) }),
     ])
     closePendingModal()
   }
 
   const visiblePendingItems = activeTab === 'found' ? pendingFoundItems : pendingLostItems
+  const currentPendingLoading = activeTab === 'found' ? pendingFoundQuery.isLoading : pendingLostQuery.isLoading
+  const currentPendingKind = activeTab === 'found' ? 'found' : 'lost'
 
   return (
     <Flex vertical gap={16}>
@@ -209,7 +206,7 @@ export default function ReviewPublishPage() {
 
       {activeTab === 'history'
         ? (
-            <Card title="历史审核记录" styles={{ body: { padding: '12px 14px' } }} loading={approvedHistoryQuery.isLoading || rejectedHistoryQuery.isLoading}>
+            <Card title="历史审核记录" styles={{ body: { padding: '12px 14px' } }} loading={reviewRecordsQuery.isLoading}>
               {sortedHistory.length === 0
                 ? (
                     <div className="py-10">
@@ -231,9 +228,23 @@ export default function ReviewPublishPage() {
                                 {KIND_LABEL[item.kind]}
                               </Text>
                               <Text type="secondary">
-                                记录时间：
-                                {formatDateTime(item.createdAt)}
+                                校区：
+                                {item.campus}
                               </Text>
+                              <Text type="secondary">
+                                地点：
+                                {item.location}
+                              </Text>
+                              <Text type="secondary">
+                                审核时间：
+                                {item.processedAt ? formatDateTime(item.processedAt) : '-'}
+                              </Text>
+                              {item.rejectReason && (
+                                <Text type="secondary">
+                                  驳回理由：
+                                  {item.rejectReason}
+                                </Text>
+                              )}
                             </Flex>
                           </Card>
                         ))}
@@ -243,14 +254,14 @@ export default function ReviewPublishPage() {
             </Card>
           )
         : (
-            <Card title="待审核列表" styles={{ body: { padding: '12px 14px' } }} loading={pendingListQuery.isLoading}>
-              {!pendingListQuery.isLoading && visiblePendingItems.length === 0 && (
+            <Card title="待审核列表" styles={{ body: { padding: '12px 14px' } }} loading={currentPendingLoading}>
+              {!currentPendingLoading && visiblePendingItems.length === 0 && (
                 <div className="py-10">
                   <Empty description="当前没有待审核信息" />
                 </div>
               )}
 
-              {!pendingListQuery.isLoading && visiblePendingItems.length > 0 && (
+              {!currentPendingLoading && visiblePendingItems.length > 0 && (
                 <div className="max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
                     {visiblePendingItems.map(item => (
@@ -264,7 +275,7 @@ export default function ReviewPublishPage() {
                         <Flex vertical gap={8}>
                           <Flex justify="space-between" align="center" wrap>
                             <Text strong>{item.item_name}</Text>
-                            <Tag color="processing">{KIND_LABEL[toPublishKind(item.publish_type)]}</Tag>
+                            <Tag color="processing">{KIND_LABEL[currentPendingKind]}</Tag>
                           </Flex>
                           <Text type="secondary">{item.item_type}</Text>
                           <Text type="secondary">
@@ -285,7 +296,7 @@ export default function ReviewPublishPage() {
           )}
 
       <Modal
-        title={currentPendingDetail ? `${KIND_LABEL[toPublishKind(currentPendingDetail.publish_type)]}发布信息` : '发布信息'}
+        title={currentPendingDetail ? `${KIND_LABEL[toPublishKind(currentPendingDetail.publish_type ?? currentPendingKind)]}发布信息` : '发布信息'}
         open={Boolean(currentPostId)}
         onCancel={closePendingModal}
         footer={null}
@@ -303,7 +314,7 @@ export default function ReviewPublishPage() {
                   column={1}
                   size="small"
                   items={[
-                    { label: '发布类型', children: KIND_LABEL[toPublishKind(currentPendingDetail.publish_type)] },
+                    { label: '发布类型', children: KIND_LABEL[toPublishKind(currentPendingDetail.publish_type ?? currentPendingKind)] },
                     { label: '物品类型', children: currentPendingDetail.item_type },
                     { label: '物品名称', children: currentPendingDetail.item_name },
                     { label: '地点', children: currentPendingDetail.location },

@@ -11,7 +11,10 @@ import type {
   AdminPostListRequest,
   AdminPostListResponse,
   AdminPostOperationRequest,
+  AdminPublishedListRequest,
   AdminRejectPostRequest,
+  AdminReviewRecordsRequest,
+  AdminReviewRecordsResponse,
   AdminStatisticsResponse,
 } from './types'
 import { request } from '@/api/core/request'
@@ -20,14 +23,17 @@ import { toCampusParam, toPublishTypeParam } from '@/api/shared/transforms'
 export function getAdminPendingPostList(params: AdminPendingListRequest = {}) {
   const page = params.page ?? params.Page
   const pageSize = params.page_size ?? params.PageSize
+  const publishType = params.type ?? params.Type ?? toPublishTypeParam(params.publish_type)
 
   return request<AdminPendingListResponse>({
     method: 'GET',
     params: {
       Page: page,
       PageSize: pageSize,
+      Type: publishType,
       page,
       page_size: pageSize,
+      type: publishType,
     },
     url: '/admin/list',
   })
@@ -38,6 +44,17 @@ export function getAdminPostDetail(postId: number) {
     method: 'GET',
     params: { post_id: postId },
     url: '/admin/detail',
+  })
+}
+
+export function getAdminReviewRecords(params: AdminReviewRecordsRequest = {}) {
+  return request<AdminReviewRecordsResponse>({
+    method: 'GET',
+    params: {
+      page: params.page ?? 1,
+      page_size: params.page_size ?? 20,
+    },
+    url: '/admin/review-records',
   })
 }
 
@@ -56,6 +73,18 @@ export function getAdminPostList(params: AdminPostListRequest) {
       status: params.status,
     },
     url: '/admin/post-list',
+  })
+}
+
+export function getAdminPublishedPostList(params: AdminPublishedListRequest) {
+  return request<AdminPostListResponse>({
+    method: 'GET',
+    params: {
+      page: params.page ?? 1,
+      page_size: params.page_size ?? 20,
+      type: toPublishTypeParam(params.publish_type),
+    },
+    url: '/admin/published-list',
   })
 }
 
