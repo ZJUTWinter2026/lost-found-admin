@@ -7,6 +7,7 @@ import { App, Button, Card, DatePicker, Descriptions, Empty, Flex, Image, Input,
 import { useMemo, useState } from 'react'
 import { resolveErrorMessage } from '@/api/core/errors'
 import { toCampusName, toPublishKind } from '@/api/shared/transforms'
+import { MANAGED_POST_STATUS_OPTIONS, toPostStatusLabel, toPostStatusTagColor } from '@/constants/post-status'
 import { useAdminPostListQuery } from '@/query/admin'
 import { usePostDetailQuery, useUpdatePostMutation } from '@/query/post'
 import { queryKeys } from '@/query/query-keys'
@@ -46,71 +47,8 @@ const PUBLISH_TYPE_LABEL_MAP: Record<PublishKind, string> = {
   lost: '失物',
 }
 
-const STATUS_OPTIONS: Array<{ label: string, value: ManagedPostStatus }> = [
-  { label: '待审核', value: 'PENDING' },
-  { label: '已通过', value: 'APPROVED' },
-  { label: '已认领', value: 'SOLVED' },
-  { label: '已取消', value: 'CANCELLED' },
-  { label: '已驳回', value: 'REJECTED' },
-  { label: '已归档', value: 'ARCHIVED' },
-]
-
-const STATUS_LABEL_MAP: Record<ManagedPostStatus, string> = {
-  APPROVED: '已通过',
-  ARCHIVED: '已归档',
-  CANCELLED: '已取消',
-  PENDING: '待审核',
-  REJECTED: '已驳回',
-  SOLVED: '已认领',
-}
-
-const STATUS_COLOR_MAP: Record<ManagedPostStatus, string> = {
-  APPROVED: 'processing',
-  ARCHIVED: 'default',
-  CANCELLED: 'error',
-  PENDING: 'warning',
-  REJECTED: 'error',
-  SOLVED: 'success',
-}
-
-function resolveManagedStatus(status: string | undefined): ManagedPostStatus | null {
-  if (!status)
-    return null
-
-  const normalized = status.toUpperCase()
-
-  if (normalized === 'PENDING')
-    return 'PENDING'
-
-  if (normalized === 'APPROVED')
-    return 'APPROVED'
-
-  if (normalized === 'SOLVED')
-    return 'SOLVED'
-
-  if (normalized === 'CANCELLED')
-    return 'CANCELLED'
-
-  if (normalized === 'REJECTED')
-    return 'REJECTED'
-
-  if (normalized === 'ARCHIVED')
-    return 'ARCHIVED'
-
-  return null
-}
-
 function renderStatusTag(status: string) {
-  const resolvedStatus = resolveManagedStatus(status)
-
-  if (!resolvedStatus)
-    return <Tag>{status || '-'}</Tag>
-
-  return (
-    <Tag color={STATUS_COLOR_MAP[resolvedStatus]}>
-      {STATUS_LABEL_MAP[resolvedStatus]}
-    </Tag>
-  )
+  return <Tag color={toPostStatusTagColor(status)}>{toPostStatusLabel(status)}</Tag>
 }
 
 function renderPublishTypeTag(publishType: string) {
@@ -401,7 +339,7 @@ export default function InfoMaintenancePage() {
                 value={filters.status}
                 placeholder="物品状态"
                 className="w-full sm:w-44"
-                options={STATUS_OPTIONS}
+                options={MANAGED_POST_STATUS_OPTIONS}
                 onChange={value => setFilters(prev => ({ ...prev, status: value }))}
                 allowClear
               />

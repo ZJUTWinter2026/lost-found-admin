@@ -8,6 +8,7 @@ import { App, Button, Card, Flex, Input, InputNumber, Popconfirm, Segmented, Spa
 import { useMemo, useState } from 'react'
 import { resolveErrorMessage } from '@/api/core/errors'
 import { toPublishKind } from '@/api/shared/transforms'
+import { toPostStatusLabel, toPostStatusTagColor } from '@/constants/post-status'
 import { useAdminExpiredListQuery, useAdminStatisticsQuery, useCleanAdminExpiredDataMutation, useExportAdminSystemDataMutation } from '@/query/admin'
 import { queryKeys } from '@/query/query-keys'
 import { useSystemConfigQuery, useUpdateClaimValidityDaysMutation, useUpdateFeedbackTypesMutation, useUpdateItemTypesMutation, useUpdatePublishLimitMutation } from '@/query/system'
@@ -15,39 +16,6 @@ import { formatDateTime } from '@/utils/admin-mock'
 
 type GlobalTab = 'overview' | 'params' | 'data'
 const PROTECTED_TYPE_NAMES = new Set(['其他类型', '其它类型'])
-
-const EXPIRED_STATUS_LABEL_MAP: Record<string, string> = {
-  APPROVED: '已通过',
-  ARCHIVED: '已归档',
-  CANCELLED: '已取消',
-  DELETED: '已删除',
-  PENDING: '待审核',
-  REJECTED: '已驳回',
-  SOLVED: '已认领',
-}
-
-function toExpiredStatusLabel(value: string) {
-  const normalized = value.toUpperCase()
-  return EXPIRED_STATUS_LABEL_MAP[normalized] ?? value
-}
-
-function toExpiredStatusColor(value: string) {
-  const normalized = value.toUpperCase()
-
-  if (normalized === 'SOLVED')
-    return 'success'
-
-  if (normalized === 'ARCHIVED')
-    return 'default'
-
-  if (normalized === 'APPROVED')
-    return 'processing'
-
-  if (normalized === 'CANCELLED' || normalized === 'REJECTED' || normalized === 'DELETED')
-    return 'error'
-
-  return 'blue'
-}
 
 function resolveExportUrl(url: string) {
   if (typeof window === 'undefined')
@@ -132,7 +100,7 @@ export default function GlobalManagementPage() {
         dataIndex: 'status',
         key: 'status',
         width: 110,
-        render: value => <Tag color={toExpiredStatusColor(value as string)}>{toExpiredStatusLabel(value as string)}</Tag>,
+        render: value => <Tag color={toPostStatusTagColor(value as string)}>{toPostStatusLabel(value as string)}</Tag>,
       },
       {
         title: <span className="font-semibold">地点</span>,
@@ -295,7 +263,12 @@ export default function GlobalManagementPage() {
                 rowKey="key"
                 title={() => <span className="text-base font-semibold text-slate-900">按状态统计</span>}
                 columns={[
-                  { title: <span className="font-semibold">状态</span>, dataIndex: 'status', key: 'status' },
+                  {
+                    title: <span className="font-semibold">状态</span>,
+                    dataIndex: 'status',
+                    key: 'status',
+                    render: value => toPostStatusLabel(value as string),
+                  },
                   { title: <span className="font-semibold">数量</span>, dataIndex: 'total', key: 'total' },
                 ]}
                 dataSource={statusRows}

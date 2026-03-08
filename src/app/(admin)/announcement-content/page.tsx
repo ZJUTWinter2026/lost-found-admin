@@ -6,6 +6,7 @@ import { App, Button, Card, Descriptions, Empty, Flex, Image, Input, Modal, Radi
 import { useMemo, useState } from 'react'
 import { resolveErrorMessage } from '@/api/core/errors'
 import { toCampusName, toDisableDurationParam, toPublishKind } from '@/api/shared/transforms'
+import { toPostStatusLabel } from '@/constants/post-status'
 import { useDisableAccountMutation } from '@/query/account'
 import {
   useAdminPendingDetailQuery,
@@ -462,7 +463,7 @@ export default function AnnouncementContentPage() {
                       { key: 'kind', label: '发布类型', children: KIND_LABEL[toPublishKind(postDetailQuery.data.publish_type)] },
                       { key: 'type', label: '物品类型', children: postDetailQuery.data.item_type },
                       { key: 'name', label: '名称', children: postDetailQuery.data.item_name },
-                      { key: 'status', label: '物品状态', children: postDetailQuery.data.status },
+                      { key: 'status', label: '物品状态', children: toPostStatusLabel(postDetailQuery.data.status) },
                       { key: 'features', label: '描述特征', children: postDetailQuery.data.features },
                       { key: 'location', label: '具体地点', children: postDetailQuery.data.location },
                       { key: 'time', label: '时间范围', children: formatDateTime(postDetailQuery.data.event_time) },
@@ -598,7 +599,7 @@ export default function AnnouncementContentPage() {
                       { key: 'type', label: '物品类型', children: relatedPost?.item_type ?? '-' },
                       { key: 'campus', label: '校区', children: toCampusName(relatedPost?.campus) ?? relatedPost?.campus ?? '-' },
                       { key: 'location', label: '地点', children: relatedPost?.location ?? '-' },
-                      { key: 'status', label: '状态', children: relatedPost?.status ?? '-' },
+                      { key: 'status', label: '状态', children: toPostStatusLabel(relatedPost?.status) },
                     ]}
                   />
 

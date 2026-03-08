@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { App, Button, Card, Descriptions, Empty, Flex, Image, Input, Modal, Segmented, Space, Tag, Typography } from 'antd'
 import { useMemo, useState } from 'react'
 import { normalizeDateTime, toCampusName, toPublishKind } from '@/api/shared/transforms'
+import { resolveManagedPostStatus, toPostStatusLabel, toPostStatusTagColor } from '@/constants/post-status'
 import {
   useAdminPendingDetailQuery,
   useAdminPendingListQuery,
@@ -20,7 +21,7 @@ const { TextArea } = Input
 const { Text, Title } = Typography
 
 type ReviewTab = 'lost' | 'found' | 'history'
-type ReviewResult = 'approved' | 'rejected'
+type ReviewResult = 'APPROVED' | 'REJECTED'
 
 interface ReviewHistoryItem {
   id: number
@@ -39,22 +40,10 @@ const KIND_LABEL = {
   found: '招领',
 } as const
 
-const RESULT_LABEL: Record<ReviewResult, string> = {
-  approved: '已通过',
-  rejected: '已驳回',
-}
-
-const RESULT_COLOR: Record<ReviewResult, string> = {
-  approved: 'success',
-  rejected: 'error',
-}
-
 function toReviewResult(status: string): ReviewResult | null {
-  const normalized = status.toUpperCase()
-  if (normalized === 'APPROVED')
-    return 'approved'
-  if (normalized === 'REJECTED')
-    return 'rejected'
+  const resolvedStatus = resolveManagedPostStatus(status)
+  if (resolvedStatus === 'APPROVED' || resolvedStatus === 'REJECTED')
+    return resolvedStatus
   return null
 }
 
@@ -221,7 +210,7 @@ export default function ReviewPublishPage() {
                             <Flex vertical gap={8}>
                               <Flex justify="space-between" align="center" wrap>
                                 <Text strong>{item.itemName}</Text>
-                                <Tag color={RESULT_COLOR[item.reviewResult]}>{RESULT_LABEL[item.reviewResult]}</Tag>
+                                <Tag color={toPostStatusTagColor(item.reviewResult)}>{toPostStatusLabel(item.reviewResult)}</Tag>
                               </Flex>
                               <Text type="secondary">
                                 发布类型：

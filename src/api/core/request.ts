@@ -5,7 +5,9 @@ import { httpClient } from './http-client'
 import { isApiEnvelope } from './types'
 
 const SUCCESS_CODES = new Set([0, 200])
+const UNAUTHORIZED_CODE = 20000
 const DISABLED_ACCOUNT_CODE = 30017
+const REDIRECT_LOGIN_CODES = new Set([UNAUTHORIZED_CODE, DISABLED_ACCOUNT_CODE])
 
 export async function request<T>(config: AxiosRequestConfig) {
   const response = await httpClient.request<T>(config)
@@ -13,7 +15,7 @@ export async function request<T>(config: AxiosRequestConfig) {
 
   if (isApiEnvelope<T>(payload)) {
     if (!SUCCESS_CODES.has(payload.code)) {
-      if (payload.code === DISABLED_ACCOUNT_CODE) {
+      if (REDIRECT_LOGIN_CODES.has(payload.code)) {
         const { isLoggedIn, logout } = useAuthStore.getState()
         if (isLoggedIn)
           logout()

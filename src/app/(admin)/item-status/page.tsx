@@ -30,7 +30,7 @@ const KIND_LABEL: Record<ItemTab, string> = {
 
 const STATUS_LABEL: Record<ItemFlowStatus, string> = {
   unmatched: '未匹配',
-  matched: '已认领',
+  matched: '已归还/已找回',
   archived: '已归档',
 }
 
@@ -121,7 +121,7 @@ export default function ItemStatusPage() {
 
     try {
       await claimMutation.mutateAsync({ post_id: currentDetail.id })
-      message.success('已标记为已认领')
+      message.success('已标记为已归还/已找回')
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'post-list'] }),
@@ -339,7 +339,7 @@ export default function ItemStatusPage() {
                   disabled={currentFlowStatus !== 'unmatched' || isSubmitting}
                   loading={isSubmitting}
                 >
-                  已认领
+                  已归还/已找回
                 </Button>
               </Flex>
 
