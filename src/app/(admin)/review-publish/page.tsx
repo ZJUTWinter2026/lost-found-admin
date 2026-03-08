@@ -83,8 +83,8 @@ export default function ReviewPublishPage() {
 
   const pendingListQuery = useAdminPendingListQuery()
   const pendingDetailQuery = useAdminPendingDetailQuery(currentPostId)
-  const approvedHistoryQuery = useAdminPostListQuery({ page: 1, page_size: 50, status: 'APPROVED' }, activeTab === 'history')
-  const rejectedHistoryQuery = useAdminPostListQuery({ page: 1, page_size: 50, status: 'REJECTED' }, activeTab === 'history')
+  const approvedHistoryQuery = useAdminPostListQuery({ page: 1, page_size: 50, status: 'APPROVED' })
+  const rejectedHistoryQuery = useAdminPostListQuery({ page: 1, page_size: 50, status: 'REJECTED' })
 
   const approveMutation = useApproveAdminPostMutation()
   const rejectMutation = useRejectAdminPostMutation()
@@ -116,13 +116,15 @@ export default function ReviewPublishPage() {
     [approvedHistoryQuery.data?.list, rejectedHistoryQuery.data?.list],
   )
 
+  const historyTotal = (approvedHistoryQuery.data?.total ?? 0) + (rejectedHistoryQuery.data?.total ?? 0)
+
   const tabOptions = useMemo<SegmentedProps['options']>(
     () => [
       { label: `失物（${pendingLostItems.length}）`, value: 'lost' },
       { label: `招领（${pendingFoundItems.length}）`, value: 'found' },
-      { label: `历史审核记录（${sortedHistory.length}）`, value: 'history' },
+      { label: `历史审核记录（${historyTotal}）`, value: 'history' },
     ],
-    [pendingFoundItems.length, pendingLostItems.length, sortedHistory.length],
+    [historyTotal, pendingFoundItems.length, pendingLostItems.length],
   )
 
   const currentPendingDetail = pendingDetailQuery.data

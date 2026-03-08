@@ -15,6 +15,7 @@ interface AdminShellProps {
 export function AdminShell({ children }: AdminShellProps) {
   const pathname = usePathname()
   const router = useRouter()
+  const hasHydrated = useAuthStore(state => state.hasHydrated)
   const isLoggedIn = useAuthStore(state => state.isLoggedIn)
   const role = useAuthStore(state => state.role)
 
@@ -25,6 +26,9 @@ export function AdminShell({ children }: AdminShellProps) {
   }, [pathname, role])
 
   useEffect(() => {
+    if (!hasHydrated)
+      return
+
     if (!isLoggedIn || !role) {
       router.replace('/login')
       return
@@ -33,9 +37,9 @@ export function AdminShell({ children }: AdminShellProps) {
     if (!canViewCurrentRoute) {
       router.replace(getDefaultRouteByRole(role))
     }
-  }, [canViewCurrentRoute, isLoggedIn, role, router])
+  }, [canViewCurrentRoute, hasHydrated, isLoggedIn, role, router])
 
-  if (!isLoggedIn || !role || !canViewCurrentRoute) {
+  if (!hasHydrated || !isLoggedIn || !role || !canViewCurrentRoute) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Spin size="large" />

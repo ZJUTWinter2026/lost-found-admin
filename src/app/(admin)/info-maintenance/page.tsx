@@ -1,22 +1,19 @@
 'use client'
 
-import type { ColumnsType } from 'antd/es/table'
 import type { AdminPostListItem } from '@/api/modules/admin'
 import type { CampusName } from '@/api/shared/transforms'
 import { useQueryClient } from '@tanstack/react-query'
-import { App, Button, Card, DatePicker, Descriptions, Empty, Flex, Image, Input, InputNumber, List, Modal, Select, Space, Table, Tag, Typography } from 'antd'
+import { App, Button, Card, DatePicker, Descriptions, Empty, Flex, Image, Input, List, Modal, Select, Space, Tag, Typography } from 'antd'
 import { useMemo, useState } from 'react'
 import { resolveErrorMessage } from '@/api/core/errors'
 import { toCampusName } from '@/api/shared/transforms'
 import { useAdminPostListQuery } from '@/query/admin'
-import { usePublishAnnouncementMutation } from '@/query/announcement'
 import { usePostDetailQuery, useUpdatePostMutation } from '@/query/post'
 import { queryKeys } from '@/query/query-keys'
 import { useSystemConfigQuery } from '@/query/system'
 import { formatDateTime, getBeijingTimestamp, toBeijingDayBoundary } from '@/utils/admin-mock'
 
 const { RangePicker } = DatePicker
-const { TextArea } = Input
 const { Text, Title } = Typography
 
 type FlowStatusFilter = 'unmatched' | 'matched' | 'claimed'
@@ -28,12 +25,6 @@ interface FilterValues {
   itemType?: string
   startDate?: string
   status?: FlowStatusFilter
-}
-
-interface StatisticsRow {
-  key: string
-  metric: string
-  total: number
 }
 
 const DEFAULT_ITEM_TYPES = ['电子', '饭卡', '文体', '证件', '衣包', '饰品', '其他类型'] as const
@@ -93,11 +84,6 @@ function toApiCampusCode(value: string | undefined): ApiCampusCode | undefined {
   return undefined
 }
 
-function escapeCsvCell(value: string | number) {
-  const raw = String(value).replaceAll('"', '""')
-  return `"${raw}"`
-}
-
 export default function InfoMaintenancePage() {
   const { message } = App.useApp()
   const queryClient = useQueryClient()
@@ -105,7 +91,6 @@ export default function InfoMaintenancePage() {
   const [filters, setFilters] = useState<FilterValues>({})
   const [appliedFilters, setAppliedFilters] = useState<FilterValues>({})
   const [hasSearched, setHasSearched] = useState(false)
-  const [showStatistics, setShowStatistics] = useState(false)
 
   const [showOtherTypeModal, setShowOtherTypeModal] = useState(false)
   const [otherTypeInput, setOtherTypeInput] = useState('')
@@ -115,14 +100,9 @@ export default function InfoMaintenancePage() {
   const [editedStorageLocation, setEditedStorageLocation] = useState('')
   const [editedContactPhone, setEditedContactPhone] = useState('')
 
-  const [showNoticeSection, setShowNoticeSection] = useState(false)
-  const [noticeContent, setNoticeContent] = useState('')
-  const [targetUserId, setTargetUserId] = useState<number | null>(null)
-
   const configQuery = useSystemConfigQuery()
   const detailQuery = usePostDetailQuery(selectedPostId)
   const updatePostMutation = useUpdatePostMutation()
-  const publishAnnouncementMutation = usePublishAnnouncementMutation()
 
   const queryParams = useMemo(
     () => ({
@@ -172,48 +152,14 @@ export default function InfoMaintenancePage() {
     return sortedRows.filter(item => toFlowStatus(item.status) === appliedFilters.status)
   }, [appliedFilters.status, sortedRows])
 
-  const statisticsRows = useMemo<StatisticsRow[]>(() => {
-    const published = displayRows.length
-    const matched = displayRows.filter((item) => {
-      const flowStatus = toFlowStatus(item.status)
-      return flowStatus === 'matched' || flowStatus === 'claimed'
-    }).length
-    const claimed = displayRows.filter(item => toFlowStatus(item.status) === 'claimed').length
-
-    return [
-      { key: 'published', metric: '发布总数', total: published },
-      { key: 'matched', metric: '匹配总数', total: matched },
-      { key: 'claimed', metric: '认领总数', total: claimed },
-    ]
-  }, [displayRows])
-
-  const statisticsColumns = useMemo<ColumnsType<StatisticsRow>>(
-    () => [
-      {
-        dataIndex: 'metric',
-        key: 'metric',
-        title: <span className="font-semibold">统计指标</span>,
-      },
-      {
-        dataIndex: 'total',
-        key: 'total',
-        title: <span className="font-semibold">数量</span>,
-      },
-    ],
-    [],
-  )
-
   const closeDetailModal = () => {
-    if (updatePostMutation.isPending || publishAnnouncementMutation.isPending)
+    if (updatePostMutation.isPending)
       return
 
     setSelectedPostId(null)
     setShowEditSection(false)
     setEditedStorageLocation('')
     setEditedContactPhone('')
-    setShowNoticeSection(false)
-    setNoticeContent('')
-    setTargetUserId(null)
   }
 
   const openDetailModal = (item: AdminPostListItem) => {
@@ -221,9 +167,6 @@ export default function InfoMaintenancePage() {
     setShowEditSection(false)
     setEditedStorageLocation('')
     setEditedContactPhone('')
-    setShowNoticeSection(false)
-    setNoticeContent('')
-    setTargetUserId(null)
   }
 
   const currentDetail = detailQuery.data
@@ -231,7 +174,6 @@ export default function InfoMaintenancePage() {
   const handleSearch = () => {
     setAppliedFilters({ ...filters })
     setHasSearched(true)
-    setShowStatistics(false)
   }
 
   const handleConfirmOtherType = () => {
@@ -316,78 +258,6 @@ export default function InfoMaintenancePage() {
     catch (error) {
       message.error(resolveErrorMessage(error, '更新失败，请稍后再试'))
     }
-  }
-
-  const handleSendNotice = async () => {
-    if (!currentDetail)
-      return
-
-    const content = noticeContent.trim()
-    if (!content) {
-      message.warning('请输入通知内容')
-      return
-    }
-
-    if (content.length > 1000) {
-      message.warning('通知内容最多 1000 字')
-      return
-    }
-
-    const campusCode = toApiCampusCode(currentDetail.campus)
-    if (!campusCode) {
-      message.warning('当前记录缺少校区信息，无法发送区域公告')
-      return
-    }
-
-    try {
-      await publishAnnouncementMutation.mutateAsync({
-        campus: campusCode,
-        content,
-        target_user_id: targetUserId && targetUserId > 0 ? targetUserId : undefined,
-        title: `物品通知-${currentDetail.item_name}`.slice(0, 100),
-        type: 'REGION',
-      })
-
-      message.success('通知已提交到区域公告审核列表')
-      setShowNoticeSection(false)
-      setNoticeContent('')
-      setTargetUserId(null)
-
-      await queryClient.invalidateQueries({ queryKey: queryKeys.announcement.reviewList() })
-    }
-    catch (error) {
-      message.error(resolveErrorMessage(error, '发送通知失败，请稍后再试'))
-    }
-  }
-
-  const handleExportStatistics = () => {
-    if (!showStatistics || statisticsRows.length === 0)
-      return
-
-    const filterSummary = [
-      ['物品类型', appliedFilters.itemType ?? '全部'],
-      ['校区', appliedFilters.campus ?? '全部'],
-      ['时间起', appliedFilters.startDate ?? '不限'],
-      ['时间止', appliedFilters.endDate ?? '不限'],
-      ['状态', appliedFilters.status ? FLOW_STATUS_LABEL_MAP[appliedFilters.status] : '全部'],
-    ]
-
-    const lines = [
-      `${escapeCsvCell('筛选条件')},${escapeCsvCell('值')}`,
-      ...filterSummary.map(([key, value]) => `${escapeCsvCell(key)},${escapeCsvCell(value)}`),
-      '',
-      `${escapeCsvCell('统计指标')},${escapeCsvCell('数量')}`,
-      ...statisticsRows.map(row => `${escapeCsvCell(row.metric)},${escapeCsvCell(row.total)}`),
-    ]
-
-    const blob = new Blob([`\uFEFF${lines.join('\n')}`], { type: 'text/csv;charset=utf-8;' })
-    const url = window.URL.createObjectURL(blob)
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = `信息维护统计_${new Date().toISOString().slice(0, 10)}.csv`
-    anchor.click()
-    window.URL.revokeObjectURL(url)
-    message.success('统计数据已导出')
   }
 
   const detailItems = useMemo(() => {
@@ -489,44 +359,6 @@ export default function InfoMaintenancePage() {
         </Flex>
       </Card>
 
-      <Card>
-        <Flex vertical gap={12}>
-          <Flex gap={8} wrap>
-            <Button
-              onClick={() => {
-                if (!hasSearched) {
-                  message.warning('请先选择筛选条件并点击查看')
-                  return
-                }
-
-                setShowStatistics(true)
-              }}
-            >
-              统计数据
-            </Button>
-
-            <Button
-              type="primary"
-              disabled={!showStatistics || statisticsRows.length === 0}
-              onClick={handleExportStatistics}
-            >
-              导出
-            </Button>
-          </Flex>
-
-          {showStatistics && (
-            <Table
-              size="small"
-              rowKey="key"
-              columns={statisticsColumns}
-              dataSource={statisticsRows}
-              pagination={false}
-              locale={{ emptyText: '暂无统计数据' }}
-            />
-          )}
-        </Flex>
-      </Card>
-
       <Card title="物品信息列表" loading={hasSearched && postListQuery.isLoading}>
         {!hasSearched && (
           <Empty description="请选择至少一个筛选条件后点击查看" />
@@ -580,16 +412,12 @@ export default function InfoMaintenancePage() {
         footer={null}
         width={860}
         destroyOnHidden
-        maskClosable={!(updatePostMutation.isPending || publishAnnouncementMutation.isPending)}
+        maskClosable={!updatePostMutation.isPending}
       >
         <Card loading={detailQuery.isLoading} bordered={false}>
           {currentDetail && (
             <Flex vertical gap={14}>
               <Flex gap={8} wrap>
-                <Button onClick={() => setShowNoticeSection(true)}>
-                  发送系统通知
-                </Button>
-
                 {!showEditSection && (
                   <Button type="primary" onClick={handleOpenEdit}>
                     更改信息
@@ -600,51 +428,6 @@ export default function InfoMaintenancePage() {
                   返回
                 </Button>
               </Flex>
-
-              {showNoticeSection && (
-                <Card size="small" title="通知输入框">
-                  <Flex vertical gap={10}>
-                    <InputNumber
-                      className="w-full sm:w-56"
-                      min={1}
-                      precision={0}
-                      placeholder="目标用户ID（可选）"
-                      value={targetUserId}
-                      onChange={value => setTargetUserId(typeof value === 'number' ? value : null)}
-                    />
-
-                    <TextArea
-                      rows={6}
-                      maxLength={1000}
-                      value={noticeContent}
-                      placeholder="请输入通知内容（限1000字）"
-                      onChange={event => setNoticeContent(event.target.value)}
-                    />
-
-                    <Flex gap={8} wrap>
-                      <Button
-                        type="primary"
-                        loading={publishAnnouncementMutation.isPending}
-                        onClick={() => {
-                          void handleSendNotice()
-                        }}
-                      >
-                        确认
-                      </Button>
-                      <Button
-                        disabled={publishAnnouncementMutation.isPending}
-                        onClick={() => {
-                          setShowNoticeSection(false)
-                          setNoticeContent('')
-                          setTargetUserId(null)
-                        }}
-                      >
-                        返回
-                      </Button>
-                    </Flex>
-                  </Flex>
-                </Card>
-              )}
 
               <Descriptions
                 column={1}

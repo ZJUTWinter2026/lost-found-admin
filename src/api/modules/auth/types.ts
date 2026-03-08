@@ -1,3 +1,4 @@
+import type { CampusName } from '@/api/shared/transforms'
 import type { AdminRole } from '@/constants/admin-access'
 
 export interface LoginRequest {
@@ -6,6 +7,7 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
+  campus: CampusName | null
   employeeNo: string
   needUpdatePassword: boolean
   role: AdminRole

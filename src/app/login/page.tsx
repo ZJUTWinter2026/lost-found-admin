@@ -25,6 +25,7 @@ interface ForgotPasswordFormValues {
 export default function LoginPage() {
   const router = useRouter()
   const { message } = App.useApp()
+  const hasHydrated = useAuthStore(state => state.hasHydrated)
   const login = useAuthStore(state => state.login)
   const isLoggedIn = useAuthStore(state => state.isLoggedIn)
   const role = useAuthStore(state => state.role)
@@ -34,10 +35,13 @@ export default function LoginPage() {
   const forgotPasswordMutation = useForgotPasswordMutation()
 
   useEffect(() => {
+    if (!hasHydrated)
+      return
+
     if (isLoggedIn && role) {
       router.replace(getDefaultRouteByRole(role))
     }
-  }, [isLoggedIn, role, router])
+  }, [hasHydrated, isLoggedIn, role, router])
 
   const openForgotModal = () => {
     setIsForgotOpen(true)
@@ -57,6 +61,7 @@ export default function LoginPage() {
       })
 
       login({
+        campus: result.campus,
         employeeNo: result.employeeNo,
         role: result.role,
         token: result.token,
