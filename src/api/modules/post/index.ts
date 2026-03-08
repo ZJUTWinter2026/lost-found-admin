@@ -1,2 +1,9 @@
-export { getPostList } from './requests'
-export type { PostListItem, PostListRequest, PostListResponse } from './types'
+export { getPostDetail, getPostList, updatePost } from './requests'
+export type {
+  PostDetail,
+  PostListItem,
+  PostListRequest,
+  PostListResponse,
+  UpdatePostRequest,
+  UpdatePostResponse,
+} from './types'

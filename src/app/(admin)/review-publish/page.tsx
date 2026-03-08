@@ -1,7 +1,7 @@
 'use client'
 
 import type { SegmentedProps } from 'antd'
-import type { AdminPostDetail } from '@/api/modules/admin'
+import type { AdminPostListItem, ManagedPostStatus } from '@/api/modules/admin'
 import { useQueryClient } from '@tanstack/react-query'
 import { App, Button, Card, Descriptions, Empty, Flex, Image, Input, Modal, Segmented, Space, Tag, Typography } from 'antd'
 import { useMemo, useState } from 'react'
@@ -9,11 +9,12 @@ import { toPublishKind } from '@/api/shared/transforms'
 import {
   useAdminPendingDetailQuery,
   useAdminPendingListQuery,
+  useAdminPostListQuery,
   useApproveAdminPostMutation,
   useRejectAdminPostMutation,
 } from '@/query/admin'
 import { queryKeys } from '@/query/query-keys'
-import { formatDateTime, getBeijingTimestamp, getNowInBeijing } from '@/utils/admin-mock'
+import { formatDateTime, getBeijingTimestamp } from '@/utils/admin-mock'
 
 const { TextArea } = Input
 const { Text, Title } = Typography
@@ -23,17 +24,12 @@ type ReviewResult = 'approved' | 'rejected'
 
 interface ReviewHistoryItem {
   id: number
+  createdAt: string
   itemName: string
   itemType: string
   kind: 'lost' | 'found'
-  contactName: string
-  contactPhone: string
-  eventTime: string
-  features: string
-  images: string[]
   reviewResult: ReviewResult
-  reviewedAt: string
-  rejectReason?: string
+  status: ManagedPostStatus
 }
 
 const KIND_LABEL = {
@@ -51,20 +47,28 @@ const RESULT_COLOR: Record<ReviewResult, string> = {
   rejected: 'error',
 }
 
-function toHistoryItem(detail: AdminPostDetail, result: ReviewResult, reason?: string): ReviewHistoryItem {
+function toReviewResult(status: string): ReviewResult | null {
+  const normalized = status.toUpperCase()
+  if (normalized === 'APPROVED')
+    return 'approved'
+  if (normalized === 'REJECTED')
+    return 'rejected'
+  return null
+}
+
+function toHistoryItem(row: AdminPostListItem): ReviewHistoryItem | null {
+  const reviewResult = toReviewResult(row.status)
+  if (!reviewResult)
+    return null
+
   return {
-    id: detail.id,
-    itemName: detail.item_name,
-    itemType: detail.item_type,
-    kind: toPublishKind(detail.publish_type),
-    contactName: detail.contact_name,
-    contactPhone: detail.contact_phone,
-    eventTime: detail.event_time,
-    features: detail.features,
-    images: detail.images ?? [],
-    reviewResult: result,
-    reviewedAt: getNowInBeijing(),
-    rejectReason: reason,
+    createdAt: row.created_at,
+    id: row.id,
+    itemName: row.item_name,
+    itemType: row.item_type,
+    kind: toPublishKind(row.publish_type),
+    reviewResult,
+    status: row.status as ManagedPostStatus,
   }
 }
 
@@ -74,12 +78,13 @@ export default function ReviewPublishPage() {
 
   const [activeTab, setActiveTab] = useState<ReviewTab>('lost')
   const [currentPostId, setCurrentPostId] = useState<number | null>(null)
-  const [historyItems, setHistoryItems] = useState<ReviewHistoryItem[]>([])
   const [rejectReason, setRejectReason] = useState('')
   const [showRejectEditor, setShowRejectEditor] = useState(false)
 
   const pendingListQuery = useAdminPendingListQuery()
   const pendingDetailQuery = useAdminPendingDetailQuery(currentPostId)
+  const approvedHistoryQuery = useAdminPostListQuery({ page: 1, page_size: 50, status: 'APPROVED' }, activeTab === 'history')
+  const rejectedHistoryQuery = useAdminPostListQuery({ page: 1, page_size: 50, status: 'REJECTED' }, activeTab === 'history')
 
   const approveMutation = useApproveAdminPostMutation()
   const rejectMutation = useRejectAdminPostMutation()
@@ -104,8 +109,11 @@ export default function ReviewPublishPage() {
   )
 
   const sortedHistory = useMemo(
-    () => [...historyItems].sort((a, b) => getBeijingTimestamp(b.reviewedAt) - getBeijingTimestamp(a.reviewedAt)),
-    [historyItems],
+    () => [...(approvedHistoryQuery.data?.list ?? []), ...(rejectedHistoryQuery.data?.list ?? [])]
+      .map(toHistoryItem)
+      .filter((item): item is ReviewHistoryItem => Boolean(item))
+      .sort((a, b) => getBeijingTimestamp(b.createdAt) - getBeijingTimestamp(a.createdAt)),
+    [approvedHistoryQuery.data?.list, rejectedHistoryQuery.data?.list],
   )
 
   const tabOptions = useMemo<SegmentedProps['options']>(
@@ -144,10 +152,13 @@ export default function ReviewPublishPage() {
       return
 
     await approveMutation.mutateAsync({ post_id: currentPendingDetail.id })
-    setHistoryItems(prev => [toHistoryItem(currentPendingDetail, 'approved'), ...prev])
 
     message.success('审核通过成功')
-    await queryClient.invalidateQueries({ queryKey: queryKeys.admin.pendingList() })
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.pendingList() }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.postList({ page: 1, page_size: 50, status: 'APPROVED' }) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.postList({ page: 1, page_size: 50, status: 'REJECTED' }) }),
+    ])
     closePendingModal()
   }
 
@@ -166,10 +177,13 @@ export default function ReviewPublishPage() {
       reason,
     })
 
-    setHistoryItems(prev => [toHistoryItem(currentPendingDetail, 'rejected', reason), ...prev])
     message.success('审核驳回成功')
 
-    await queryClient.invalidateQueries({ queryKey: queryKeys.admin.pendingList() })
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.pendingList() }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.postList({ page: 1, page_size: 50, status: 'APPROVED' }) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.postList({ page: 1, page_size: 50, status: 'REJECTED' }) }),
+    ])
     closePendingModal()
   }
 
@@ -193,7 +207,7 @@ export default function ReviewPublishPage() {
 
       {activeTab === 'history'
         ? (
-            <Card title="历史审核记录" styles={{ body: { padding: '12px 14px' } }}>
+            <Card title="历史审核记录" styles={{ body: { padding: '12px 14px' } }} loading={approvedHistoryQuery.isLoading || rejectedHistoryQuery.isLoading}>
               {sortedHistory.length === 0
                 ? (
                     <div className="py-10">
@@ -215,15 +229,9 @@ export default function ReviewPublishPage() {
                                 {KIND_LABEL[item.kind]}
                               </Text>
                               <Text type="secondary">
-                                审核时间：
-                                {formatDateTime(item.reviewedAt)}
+                                记录时间：
+                                {formatDateTime(item.createdAt)}
                               </Text>
-                              {item.rejectReason && (
-                                <Text type="secondary">
-                                  驳回理由：
-                                  {item.rejectReason}
-                                </Text>
-                              )}
                             </Flex>
                           </Card>
                         ))}

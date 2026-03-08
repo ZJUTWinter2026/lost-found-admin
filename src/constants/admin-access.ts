@@ -14,6 +14,7 @@ export const ADMIN_NAV_BY_ROLE: Record<AdminRole, AdminNavItem[]> = {
   lost_found_admin: [
     { key: '/review-publish', label: '审核发布信息' },
     { key: '/item-status', label: '管理物品状态' },
+    { key: '/info-maintenance', label: '信息维护与查询' },
   ],
   system_admin: [
     { key: '/global-management', label: '全局管理' },
@@ -28,7 +29,7 @@ export const DEFAULT_ROUTE_BY_ROLE: Record<AdminRole, string> = {
 }
 
 const ADMIN_ALLOWED_ROUTE_PREFIXES: Record<AdminRole, string[]> = {
-  lost_found_admin: ['/review-publish', '/item-status'],
+  lost_found_admin: ['/review-publish', '/item-status', '/info-maintenance'],
   system_admin: ['/global-management', '/account-permission', '/announcement-content'],
 }
 

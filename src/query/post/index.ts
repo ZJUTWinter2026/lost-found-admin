@@ -1,1 +1,2 @@
-export { usePostListQuery } from './queries'
+export { useUpdatePostMutation } from './mutations'
+export { usePostDetailQuery, usePostListQuery } from './queries'

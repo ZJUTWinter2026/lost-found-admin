@@ -1,4 +1,4 @@
-import type { PostListRequest, PostListResponse } from './types'
+import type { PostDetail, PostListRequest, PostListResponse, UpdatePostRequest, UpdatePostResponse } from './types'
 import { request } from '@/api/core/request'
 import { toCampusParam, toPublishTypeParam } from '@/api/shared/transforms'
 
@@ -17,5 +17,21 @@ export function getPostList(params: PostListRequest = {}) {
       status: params.status,
     },
     url: '/post/list',
+  })
+}
+
+export function getPostDetail(id: number) {
+  return request<PostDetail>({
+    method: 'GET',
+    params: { id },
+    url: '/post/detail',
+  })
+}
+
+export function updatePost(payload: UpdatePostRequest) {
+  return request<UpdatePostResponse>({
+    data: payload,
+    method: 'PUT',
+    url: '/post/update',
   })
 }

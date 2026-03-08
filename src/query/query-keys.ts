@@ -21,6 +21,7 @@ export const queryKeys = {
     list: () => ['feedback', 'list'] as const,
   },
   post: {
+    detail: (id?: number | null) => ['post', 'detail', id ?? null] as const,
     list: (params?: object) => ['post', 'list', params ?? {}] as const,
   },
   system: {
