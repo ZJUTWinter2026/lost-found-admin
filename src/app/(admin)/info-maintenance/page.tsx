@@ -29,7 +29,6 @@ interface FilterValues {
 }
 
 const DEFAULT_ITEM_TYPES = ['电子', '饭卡', '文体', '证件', '衣包', '饰品', '其他类型'] as const
-const OTHER_ITEM_TYPE = '其他类型'
 
 const CAMPUS_OPTIONS: Array<{ label: string, value: CampusName }> = [
   { label: '朝晖', value: '朝晖' },
@@ -151,9 +150,6 @@ export default function InfoMaintenancePage() {
   const [hasSearched, setHasSearched] = useState(false)
   const [rangePickerVersion, setRangePickerVersion] = useState(0)
 
-  const [showOtherTypeModal, setShowOtherTypeModal] = useState(false)
-  const [otherTypeInput, setOtherTypeInput] = useState('')
-
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null)
   const [showEditSection, setShowEditSection] = useState(false)
   const [editedStorageLocation, setEditedStorageLocation] = useState('')
@@ -243,23 +239,6 @@ export default function InfoMaintenancePage() {
     setAppliedFilters({})
     setHasSearched(false)
     setRangePickerVersion(prev => prev + 1)
-  }
-
-  const handleConfirmOtherType = () => {
-    const value = otherTypeInput.trim()
-    if (!value) {
-      message.warning('请输入物品类型')
-      return
-    }
-
-    if (value.length > 15) {
-      message.warning('其它类型最多输入 15 个字')
-      return
-    }
-
-    setFilters(prev => ({ ...prev, itemType: value }))
-    setShowOtherTypeModal(false)
-    setOtherTypeInput('')
   }
 
   const handleOpenEdit = () => {
@@ -383,14 +362,7 @@ export default function InfoMaintenancePage() {
                 placeholder="物品类型"
                 className="w-full sm:w-44"
                 options={itemTypeOptions}
-                onChange={(value) => {
-                  if (value === OTHER_ITEM_TYPE) {
-                    setShowOtherTypeModal(true)
-                    return
-                  }
-
-                  setFilters(prev => ({ ...prev, itemType: value }))
-                }}
+                onChange={value => setFilters(prev => ({ ...prev, itemType: value }))}
                 allowClear
               />
 
@@ -607,25 +579,6 @@ export default function InfoMaintenancePage() {
         </Card>
       </Modal>
 
-      <Modal
-        title="填写其它类型"
-        open={showOtherTypeModal}
-        onCancel={() => {
-          setShowOtherTypeModal(false)
-          setOtherTypeInput('')
-        }}
-        onOk={handleConfirmOtherType}
-        okText="确认"
-        cancelText="取消"
-        destroyOnHidden
-      >
-        <Input
-          maxLength={15}
-          value={otherTypeInput}
-          placeholder="请输入物品类型（限15字）"
-          onChange={event => setOtherTypeInput(event.target.value)}
-        />
-      </Modal>
     </Space>
   )
 }
