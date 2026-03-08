@@ -4,6 +4,7 @@ import type { SegmentedProps } from 'antd'
 import { useQueryClient } from '@tanstack/react-query'
 import { Alert, App, Button, Card, Descriptions, Empty, Flex, Image, Input, Modal, Segmented, Space, Tag, Typography } from 'antd'
 import { useMemo, useState } from 'react'
+import { resolveErrorMessage } from '@/api/core/errors'
 import { normalizePostStatus, toPublishKind } from '@/api/shared/transforms'
 import {
   useAdminPendingDetailQuery,
@@ -118,14 +119,19 @@ export default function ItemStatusPage() {
     if (!currentDetail)
       return
 
-    await claimMutation.mutateAsync({ post_id: currentDetail.id })
-    message.success('已标记为已认领')
+    try {
+      await claimMutation.mutateAsync({ post_id: currentDetail.id })
+      message.success('已标记为已认领')
 
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['admin', 'post-list'] }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.publishedList() }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.pendingDetail(currentDetail.id) }),
-    ])
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'post-list'] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.admin.publishedList() }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.admin.pendingDetail(currentDetail.id) }),
+      ])
+    }
+    catch (error) {
+      message.error(resolveErrorMessage(error, '认领操作失败，请稍后重试'))
+    }
   }
 
   const handleArchiveConfirm = async () => {
@@ -139,20 +145,25 @@ export default function ItemStatusPage() {
       return
     }
 
-    await archiveMutation.mutateAsync({
-      archive_method: archiveMethod,
-      post_id: currentDetail.id,
-    })
+    try {
+      await archiveMutation.mutateAsync({
+        archive_method: archiveMethod,
+        post_id: currentDetail.id,
+      })
 
-    message.success('归档成功')
-    setShowArchiveEditor(false)
-    setArchiveMethodInput('')
+      message.success('归档成功')
+      setShowArchiveEditor(false)
+      setArchiveMethodInput('')
 
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['admin', 'post-list'] }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.publishedList() }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.pendingDetail(currentDetail.id) }),
-    ])
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'post-list'] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.admin.publishedList() }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.admin.pendingDetail(currentDetail.id) }),
+      ])
+    }
+    catch (error) {
+      message.error(resolveErrorMessage(error, '归档失败，请稍后重试'))
+    }
   }
 
   return (
