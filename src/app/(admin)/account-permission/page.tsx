@@ -259,7 +259,7 @@ export default function AccountPermissionPage() {
         <Segmented
           value={activeTab}
           options={[
-            { label: '管理与通知', value: 'manage' },
+            { label: '账号管理', value: 'manage' },
             { label: '新增账号', value: 'create' },
           ]}
           block

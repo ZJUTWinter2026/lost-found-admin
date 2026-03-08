@@ -1,12 +1,12 @@
 'use client'
 
-import type { AdminPostListItem } from '@/api/modules/admin'
-import type { CampusName } from '@/api/shared/transforms'
+import type { AdminPostListItem, ManagedPostStatus } from '@/api/modules/admin'
+import type { CampusName, PublishKind } from '@/api/shared/transforms'
 import { useQueryClient } from '@tanstack/react-query'
 import { App, Button, Card, DatePicker, Descriptions, Empty, Flex, Image, Input, List, Modal, Select, Space, Tag, Typography } from 'antd'
 import { useMemo, useState } from 'react'
 import { resolveErrorMessage } from '@/api/core/errors'
-import { toCampusName } from '@/api/shared/transforms'
+import { toCampusName, toPublishKind } from '@/api/shared/transforms'
 import { useAdminPostListQuery } from '@/query/admin'
 import { usePostDetailQuery, useUpdatePostMutation } from '@/query/post'
 import { queryKeys } from '@/query/query-keys'
@@ -16,15 +16,16 @@ import { formatDateTime, getBeijingTimestamp, toBeijingDayBoundary } from '@/uti
 const { RangePicker } = DatePicker
 const { Text, Title } = Typography
 
-type FlowStatusFilter = 'unmatched' | 'matched' | 'claimed'
 type ApiCampusCode = 'ZHAO_HUI' | 'PING_FENG' | 'MO_GAN_SHAN'
 
 interface FilterValues {
   campus?: CampusName
   endDate?: string
   itemType?: string
+  location?: string
+  publishType?: PublishKind
   startDate?: string
-  status?: FlowStatusFilter
+  status?: ManagedPostStatus
 }
 
 const DEFAULT_ITEM_TYPES = ['电子', '饭卡', '文体', '证件', '衣包', '饰品', '其他类型'] as const
@@ -36,34 +37,91 @@ const CAMPUS_OPTIONS: Array<{ label: string, value: CampusName }> = [
   { label: '莫干山', value: '莫干山' },
 ]
 
-const FLOW_STATUS_OPTIONS: Array<{ label: string, value: FlowStatusFilter }> = [
-  { label: '未匹配', value: 'unmatched' },
-  { label: '已匹配', value: 'matched' },
-  { label: '已认领', value: 'claimed' },
+const PUBLISH_TYPE_OPTIONS: Array<{ label: string, value: PublishKind }> = [
+  { label: '失物', value: 'lost' },
+  { label: '招领', value: 'found' },
 ]
 
-const FLOW_STATUS_LABEL_MAP: Record<FlowStatusFilter, string> = {
-  claimed: '已认领',
-  matched: '已匹配',
-  unmatched: '未匹配',
+const PUBLISH_TYPE_LABEL_MAP: Record<PublishKind, string> = {
+  found: '招领',
+  lost: '失物',
 }
 
-const FLOW_STATUS_COLOR_MAP: Record<FlowStatusFilter, string> = {
-  claimed: 'success',
-  matched: 'processing',
-  unmatched: 'default',
+const STATUS_OPTIONS: Array<{ label: string, value: ManagedPostStatus }> = [
+  { label: '待审核', value: 'PENDING' },
+  { label: '已通过', value: 'APPROVED' },
+  { label: '已认领', value: 'SOLVED' },
+  { label: '已取消', value: 'CANCELLED' },
+  { label: '已驳回', value: 'REJECTED' },
+  { label: '已归档', value: 'ARCHIVED' },
+]
+
+const STATUS_LABEL_MAP: Record<ManagedPostStatus, string> = {
+  APPROVED: '已通过',
+  ARCHIVED: '已归档',
+  CANCELLED: '已取消',
+  PENDING: '待审核',
+  REJECTED: '已驳回',
+  SOLVED: '已认领',
 }
 
-function toFlowStatus(status: string): FlowStatusFilter {
-  const normalized = status.toLowerCase()
+const STATUS_COLOR_MAP: Record<ManagedPostStatus, string> = {
+  APPROVED: 'processing',
+  ARCHIVED: 'default',
+  CANCELLED: 'error',
+  PENDING: 'warning',
+  REJECTED: 'error',
+  SOLVED: 'success',
+}
 
-  if (normalized.includes('claim') || normalized.includes('solve'))
-    return 'claimed'
+function resolveManagedStatus(status: string | undefined): ManagedPostStatus | null {
+  if (!status)
+    return null
 
-  if (normalized.includes('match'))
-    return 'matched'
+  const normalized = status.toUpperCase()
 
-  return 'unmatched'
+  if (normalized === 'PENDING')
+    return 'PENDING'
+
+  if (normalized === 'APPROVED')
+    return 'APPROVED'
+
+  if (normalized === 'SOLVED')
+    return 'SOLVED'
+
+  if (normalized === 'CANCELLED')
+    return 'CANCELLED'
+
+  if (normalized === 'REJECTED')
+    return 'REJECTED'
+
+  if (normalized === 'ARCHIVED')
+    return 'ARCHIVED'
+
+  return null
+}
+
+function renderStatusTag(status: string) {
+  const resolvedStatus = resolveManagedStatus(status)
+
+  if (!resolvedStatus)
+    return <Tag>{status || '-'}</Tag>
+
+  return (
+    <Tag color={STATUS_COLOR_MAP[resolvedStatus]}>
+      {STATUS_LABEL_MAP[resolvedStatus]}
+    </Tag>
+  )
+}
+
+function renderPublishTypeTag(publishType: string) {
+  const kind = toPublishKind(publishType)
+
+  return (
+    <Tag color={kind === 'lost' ? 'gold' : 'blue'}>
+      {PUBLISH_TYPE_LABEL_MAP[kind]}
+    </Tag>
+  )
 }
 
 function toApiCampusCode(value: string | undefined): ApiCampusCode | undefined {
@@ -91,6 +149,7 @@ export default function InfoMaintenancePage() {
   const [filters, setFilters] = useState<FilterValues>({})
   const [appliedFilters, setAppliedFilters] = useState<FilterValues>({})
   const [hasSearched, setHasSearched] = useState(false)
+  const [rangePickerVersion, setRangePickerVersion] = useState(0)
 
   const [showOtherTypeModal, setShowOtherTypeModal] = useState(false)
   const [otherTypeInput, setOtherTypeInput] = useState('')
@@ -109,9 +168,12 @@ export default function InfoMaintenancePage() {
       campus: appliedFilters.campus,
       end_time: toBeijingDayBoundary(appliedFilters.endDate ?? '', 'end'),
       item_type: appliedFilters.itemType,
+      location: appliedFilters.location,
       page: 1,
       page_size: 50,
+      publish_type: appliedFilters.publishType,
       start_time: toBeijingDayBoundary(appliedFilters.startDate ?? '', 'start'),
+      status: appliedFilters.status,
     }),
     [appliedFilters],
   )
@@ -121,10 +183,14 @@ export default function InfoMaintenancePage() {
   const canSearch = Boolean(
     filters.itemType
     || filters.campus
+    || filters.location?.trim()
+    || filters.publishType
     || filters.startDate
     || filters.endDate
     || filters.status,
   )
+
+  const canReset = canSearch || hasSearched
 
   const itemTypeOptions = useMemo(() => {
     const base = new Set<string>(DEFAULT_ITEM_TYPES)
@@ -144,13 +210,6 @@ export default function InfoMaintenancePage() {
       .sort((a, b) => getBeijingTimestamp(b.event_time) - getBeijingTimestamp(a.event_time)),
     [postListQuery.data?.list],
   )
-
-  const displayRows = useMemo(() => {
-    if (!appliedFilters.status)
-      return sortedRows
-
-    return sortedRows.filter(item => toFlowStatus(item.status) === appliedFilters.status)
-  }, [appliedFilters.status, sortedRows])
 
   const closeDetailModal = () => {
     if (updatePostMutation.isPending)
@@ -172,8 +231,18 @@ export default function InfoMaintenancePage() {
   const currentDetail = detailQuery.data
 
   const handleSearch = () => {
-    setAppliedFilters({ ...filters })
+    setAppliedFilters({
+      ...filters,
+      location: filters.location?.trim() || undefined,
+    })
     setHasSearched(true)
+  }
+
+  const handleReset = () => {
+    setFilters({})
+    setAppliedFilters({})
+    setHasSearched(false)
+    setRangePickerVersion(prev => prev + 1)
   }
 
   const handleConfirmOtherType = () => {
@@ -265,19 +334,15 @@ export default function InfoMaintenancePage() {
       return []
 
     const displayCampus = toCampusName(currentDetail.campus) ?? currentDetail.campus
-    const flowStatus = toFlowStatus(currentDetail.status)
 
     return [
+      { key: 'publishType', label: '发布类型', children: PUBLISH_TYPE_LABEL_MAP[toPublishKind(currentDetail.publish_type)] },
       { key: 'itemType', label: '物品类型', children: currentDetail.item_type || '-' },
       { key: 'itemName', label: '名称', children: currentDetail.item_name || '-' },
       {
         key: 'status',
         label: '物品状态',
-        children: (
-          <Tag color={FLOW_STATUS_COLOR_MAP[flowStatus]}>
-            {FLOW_STATUS_LABEL_MAP[flowStatus]}
-          </Tag>
-        ),
+        children: renderStatusTag(currentDetail.status),
       },
       { key: 'features', label: '描述特征', children: currentDetail.features || '-' },
       { key: 'campus', label: '拾取/丢失校区', children: displayCampus },
@@ -296,82 +361,119 @@ export default function InfoMaintenancePage() {
 
   return (
     <Space direction="vertical" size={16} className="w-full">
-      <Card>
-        <Flex vertical gap={12}>
+      <Card styles={{ body: { padding: 20 } }}>
+        <Flex vertical gap={16}>
           <Title level={4} className="!mb-0">
             信息维护与查询
           </Title>
 
-          <Flex gap={8} wrap>
-            <Select
-              value={filters.itemType}
-              placeholder="物品类型"
-              className="w-full sm:w-44"
-              options={itemTypeOptions}
-              onChange={(value) => {
-                if (value === OTHER_ITEM_TYPE) {
-                  setShowOtherTypeModal(true)
-                  return
-                }
+          <Flex vertical gap={10}>
+            <Flex gap={8} wrap>
+              <Select
+                value={filters.publishType}
+                placeholder="发布类型"
+                className="w-full sm:w-36"
+                options={PUBLISH_TYPE_OPTIONS}
+                onChange={value => setFilters(prev => ({ ...prev, publishType: value }))}
+                allowClear
+              />
 
-                setFilters(prev => ({ ...prev, itemType: value }))
-              }}
-              allowClear
-            />
+              <Select
+                value={filters.itemType}
+                placeholder="物品类型"
+                className="w-full sm:w-44"
+                options={itemTypeOptions}
+                onChange={(value) => {
+                  if (value === OTHER_ITEM_TYPE) {
+                    setShowOtherTypeModal(true)
+                    return
+                  }
 
-            <Select
-              value={filters.campus}
-              placeholder="丢失/拾取校区"
-              className="w-full sm:w-44"
-              options={CAMPUS_OPTIONS}
-              onChange={value => setFilters(prev => ({ ...prev, campus: value }))}
-              allowClear
-            />
+                  setFilters(prev => ({ ...prev, itemType: value }))
+                }}
+                allowClear
+              />
 
-            <RangePicker
-              className="w-full sm:w-[300px]"
-              onChange={(_, dateStrings) => {
-                setFilters(prev => ({
-                  ...prev,
-                  endDate: dateStrings[1] || undefined,
-                  startDate: dateStrings[0] || undefined,
-                }))
-              }}
-            />
+              <Select
+                value={filters.campus}
+                placeholder="丢失/拾取校区"
+                className="w-full sm:w-44"
+                options={CAMPUS_OPTIONS}
+                onChange={value => setFilters(prev => ({ ...prev, campus: value }))}
+                allowClear
+              />
 
-            <Select
-              value={filters.status}
-              placeholder="物品状态"
-              className="w-full sm:w-44"
-              options={FLOW_STATUS_OPTIONS}
-              onChange={value => setFilters(prev => ({ ...prev, status: value }))}
-              allowClear
-            />
+              <Input
+                value={filters.location}
+                placeholder="地点"
+                className="!w-64"
+                onChange={event => setFilters(prev => ({ ...prev, location: event.target.value }))}
+                allowClear
+              />
+            </Flex>
 
-            <Button
-              type="primary"
-              disabled={!canSearch}
-              onClick={handleSearch}
-            >
-              查看
-            </Button>
+            <Flex gap={8} wrap align="center">
+              <RangePicker
+                key={rangePickerVersion}
+                className="w-full sm:w-[320px]"
+                onChange={(_, dateStrings) => {
+                  setFilters(prev => ({
+                    ...prev,
+                    endDate: dateStrings[1] || undefined,
+                    startDate: dateStrings[0] || undefined,
+                  }))
+                }}
+              />
+
+              <Select
+                value={filters.status}
+                placeholder="物品状态"
+                className="w-full sm:w-44"
+                options={STATUS_OPTIONS}
+                onChange={value => setFilters(prev => ({ ...prev, status: value }))}
+                allowClear
+              />
+
+              <Flex gap={8} className="w-full sm:w-auto">
+                <Button
+                  className="flex-1 sm:flex-none"
+                  disabled={!canReset}
+                  onClick={handleReset}
+                >
+                  重置
+                </Button>
+
+                <Button
+                  type="primary"
+                  className="flex-1 sm:flex-none"
+                  disabled={!canSearch}
+                  onClick={handleSearch}
+                >
+                  查看
+                </Button>
+              </Flex>
+            </Flex>
           </Flex>
         </Flex>
       </Card>
 
-      <Card title="物品信息列表" loading={hasSearched && postListQuery.isLoading}>
+      <Card
+        title="物品信息列表"
+        extra={hasSearched ? <Text type="secondary">{`共 ${postListQuery.data?.total ?? 0} 条`}</Text> : null}
+        loading={hasSearched && postListQuery.isLoading}
+      >
         {!hasSearched && (
           <Empty description="请选择至少一个筛选条件后点击查看" />
         )}
 
-        {hasSearched && !postListQuery.isLoading && displayRows.length === 0 && (
+        {hasSearched && !postListQuery.isLoading && sortedRows.length === 0 && (
           <Empty description="暂无符合条件的物品信息" />
         )}
 
-        {hasSearched && !postListQuery.isLoading && displayRows.length > 0 && (
+        {hasSearched && !postListQuery.isLoading && sortedRows.length > 0 && (
           <div className="max-h-[calc(100vh-360px)] overflow-y-auto pr-1">
             <List
-              dataSource={displayRows}
+              dataSource={sortedRows}
               renderItem={item => (
                 <List.Item className="!px-0">
                   <Card
@@ -382,7 +484,10 @@ export default function InfoMaintenancePage() {
                   >
                     <Flex justify="space-between" align="start" gap={10}>
                       <Flex vertical gap={6}>
-                        <Text strong>{item.item_name}</Text>
+                        <Space size={8} wrap>
+                          {renderPublishTypeTag(item.publish_type)}
+                          <Text strong>{item.item_name}</Text>
+                        </Space>
                         <Text type="secondary">
                           丢失/拾取地点：
                           {item.location}
@@ -393,9 +498,7 @@ export default function InfoMaintenancePage() {
                         </Text>
                       </Flex>
 
-                      <Tag color={FLOW_STATUS_COLOR_MAP[toFlowStatus(item.status)]}>
-                        {FLOW_STATUS_LABEL_MAP[toFlowStatus(item.status)]}
-                      </Tag>
+                      {renderStatusTag(item.status)}
                     </Flex>
                   </Card>
                 </List.Item>
